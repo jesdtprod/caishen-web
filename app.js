@@ -56,7 +56,7 @@ function backgroundRefresh() {
   refresh(false).catch(() => {});
 }
 
-const PRODUCT_CATEGORIES = ['LPG', 'Others', 'Softdrinks'];
+const PRODUCT_CATEGORIES = ['Supplies', 'Rice', 'Water', 'Catering'];
 const PRODUCT_UNITS = ['bag', 'bottle', 'box', 'can', 'case', 'drum', 'g', 'gallon', 'kg', 'L', 'mL', 'pack', 'pc', 'sack', 'tray'];
 const DAILY_EXPENSE_CATEGORIES = ['Rent', 'Utilities', 'Salaries & Wages', 'Transportation', 'Fuel', 'Supplies', 'Repairs & Maintenance', 'Marketing & Advertising', 'Delivery & Freight', 'Government Fees & Taxes', 'Professional Fees', 'Food & Refreshments', 'Miscellaneous'];
 

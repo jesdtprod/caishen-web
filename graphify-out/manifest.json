@@ -18,9 +18,9 @@
     "semantic_hash": "85060dd50c382cc8aa0c77b96f7f5760"
   },
   "app.js": {
-    "mtime": 1791262720.0749183,
-    "seen": 1791262742.4425466,
-    "ast_hash": "1ab897f9bbb0b18a6bad890edfed2bad",
+    "mtime": 1791265795.3048687,
+    "seen": 1791265806.3034217,
+    "ast_hash": "ec6aac5a6bc72385bddd8bcd0c220b95",
     "semantic_hash": ""
   },
   "deno.json": {
