@@ -1,7 +1,7 @@
 {
-  "name": "FR Merchandise Operations POS",
-  "short_name": "FR POS",
-  "description": "Branch sales and inventory operations for FR Merchandise.",
+  "name": "Caishen Enterprises Operations POS",
+  "short_name": "CE POS",
+  "description": "Branch sales and inventory operations for Caishen Enterprises.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

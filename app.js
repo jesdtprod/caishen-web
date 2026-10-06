@@ -1,10 +1,10 @@
-const ACTIVE_BRANCH_KEY = 'fr-pos-active-branch';
-const ACTIVE_VIEW_KEY = 'fr-pos-active-view';
+const ACTIVE_BRANCH_KEY = 'ce-pos-active-branch';
+const ACTIVE_VIEW_KEY = 'ce-pos-active-view';
 let activeBranchId = localStorage.getItem(ACTIVE_BRANCH_KEY) || 'MAIN';
-const ADMIN_SESSION_KEY = 'fr-pos-admin-session';
-const INITIAL_ADMIN_KEY = 'fr-pos-initial-admin';
-const INITIAL_ADMIN_REGISTERED_KEY = 'fr-pos-initial-admin-registered';
-const supabaseConfig = window.FR_POS_SUPABASE || {};
+const ADMIN_SESSION_KEY = 'ce-pos-admin-session';
+const INITIAL_ADMIN_KEY = 'ce-pos-initial-admin';
+const INITIAL_ADMIN_REGISTERED_KEY = 'ce-pos-initial-admin-registered';
+const supabaseConfig = window.CE_POS_SUPABASE || {};
 const supabaseClient = window.supabase?.createClient?.(supabaseConfig.url, supabaseConfig.publishableKey);
 let products = [];
 let allProducts = [];
@@ -800,12 +800,12 @@ function openReportInNewPage_(htmlContent, title = 'Report') {
   const documentHtml = getReportDocumentHtml_(htmlContent, title);
 
   const reportId = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const reportStorageKey = `fr-pos-report-${reportId}`;
+  const reportStorageKey = `ce-pos-report-${reportId}`;
   const maxReportAge = 7 * 24 * 60 * 60 * 1000;
 
   try {
     Object.keys(localStorage)
-      .filter((key) => key.startsWith('fr-pos-report-'))
+      .filter((key) => key.startsWith('ce-pos-report-'))
       .forEach((key) => {
         try {
           const saved = JSON.parse(localStorage.getItem(key));
@@ -830,7 +830,7 @@ function renderReportPageFooter(pageNumber, totalPages, generatedTime, reportTyp
   return `
     <footer class="report-page-footer">
       <div class="page-footer-left">
-        <span>FR MERCHANDISE OPERATIONS &bull; ${escapeHtml(reportType)} Audit Report &bull; Generated ${escapeHtml(generatedTime)}</span>
+        <span>CAISHEN ENTERPRISES OPERATIONS &bull; ${escapeHtml(reportType)} Audit Report &bull; Generated ${escapeHtml(generatedTime)}</span>
       </div>
       <div class="page-footer-right">
         <strong class="page-number-indicator">Page ${pageNumber} of ${totalPages}</strong>
@@ -847,10 +847,10 @@ function renderReportRunningHeader(branchName, periodText, reportTitle = 'Branch
           <circle cx="18" cy="18" r="16.5" fill="#081326"/>
           <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
           <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-          <path d="M9 11h7.5v2.6h-4.8v3.5h3.8v2.5h-3.8V25H9V11z M18.5 11h4.6c2.4 0 4 1.3 4 3.6 0 1.6-.9 2.8-2.3 3.3l2.8 7.1h-2.9l-2.5-6.6h-1.1V25H18.5V11zm2.6 2.4v3.1h1.9c1 0 1.6-.6 1.6-1.5s-.6-1.6-1.6-1.6h-1.9z" fill="#FFFFFF"/>
+          <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
         </svg>
         <div>
-          <span class="running-brand-title">FR MERCHANDISE &bull; ${escapeHtml(reportTitle)}</span>
+          <span class="running-brand-title">CAISHEN ENTERPRISES &bull; ${escapeHtml(reportTitle)}</span>
           <span class="running-brand-sub">${escapeHtml(branchName)} &bull; ${escapeHtml(periodText)}</span>
         </div>
       </div>
@@ -1003,11 +1003,11 @@ function buildSalesPdfReport_() {
                 <circle cx="18" cy="18" r="16.5" fill="#081326"/>
                 <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
                 <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-                <path d="M9 11h7.5v2.6h-4.8v3.5h3.8v2.5h-3.8V25H9V11z M18.5 11h4.6c2.4 0 4 1.3 4 3.6 0 1.6-.9 2.8-2.3 3.3l2.8 7.1h-2.9l-2.5-6.6h-1.1V25H18.5V11zm2.6 2.4v3.1h1.9c1 0 1.6-.6 1.6-1.5s-.6-1.6-1.6-1.6h-1.9z" fill="#FFFFFF"/>
+                <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
               </svg>
             </div>
             <div>
-              <span class="report-eyebrow">FR MERCHANDISE OPERATIONS</span>
+              <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
               <h1 class="report-title">Branch Sales, Returns & Inventory Ledger</h1>
               <p class="report-subtitle">Official sales, refund, replacement, and returned-stock audit report</p>
             </div>
@@ -1313,7 +1313,7 @@ function buildSalesPdfReport_() {
           </div>
 
           <div class="report-disclaimer">
-            <p>FR MERCHANDISE SYSTEM-GENERATED SALES AUDIT REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p>
+            <p>CAISHEN ENTERPRISES SYSTEM-GENERATED SALES AUDIT REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p>
           </div>
         </div>
       `;
@@ -1517,10 +1517,10 @@ function generateInventoryReportPdf() {
               <circle cx="18" cy="18" r="16.5" fill="#081326"/>
               <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
               <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-              <path d="M9 11h7.5v2.6h-4.8v3.5h3.8v2.5h-3.8V25H9V11z M18.5 11h4.6c2.4 0 4 1.3 4 3.6 0 1.6-.9 2.8-2.3 3.3l2.8 7.1h-2.9l-2.5-6.6h-1.1V25H18.5V11zm2.6 2.4v3.1h1.9c1 0 1.6-.6 1.6-1.5s-.6-1.6-1.6-1.6h-1.9z" fill="#FFFFFF"/>
+              <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
             </svg>
             <div>
-              <span class="report-eyebrow">FR MERCHANDISE OPERATIONS</span>
+              <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
               <h1 class="report-title">Branch Inventory Report</h1>
               <p class="report-subtitle">Stock movement and remaining inventory by product</p>
             </div>
@@ -1566,7 +1566,7 @@ function generateInventoryReportPdf() {
       pageContentHtml += `
         <footer class="report-document-footer">
           <div class="report-sign-block"><div class="sign-column"><div class="sign-line"></div><span class="sign-title">Prepared By (Cashier / Staff)</span><span class="sign-sub">Signature over printed name</span></div><div class="sign-column"><div class="sign-line"></div><span class="sign-title">Audited & Verified By</span><span class="sign-sub">Branch Manager / Operations</span></div></div>
-          <div class="report-disclaimer"><p>FR MERCHANDISE SYSTEM-GENERATED INVENTORY REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p></div>
+          <div class="report-disclaimer"><p>CAISHEN ENTERPRISES SYSTEM-GENERATED INVENTORY REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p></div>
         </footer>
       `;
     }
@@ -3621,7 +3621,7 @@ async function downloadOperationalBackup() {
     const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = `fr-merchandise-backup-${backup.createdAt.replace(/[:.]/g, '-')}.json`;
+    link.download = `caishen-enterprises-backup-${backup.createdAt.replace(/[:.]/g, '-')}.json`;
     link.click();
     URL.revokeObjectURL(url);
     showToast('Operational backup downloaded.', 'success');
@@ -3644,7 +3644,7 @@ async function restoreOperationalBackup(event) {
     return;
   }
   if (backup?.schemaVersion !== '1' || !backup?.tables) {
-    showToast('Choose a valid FR Merchandise POS backup file.', 'error');
+    showToast('Choose a valid Caishen Enterprises POS backup file.', 'error');
     return;
   }
   const confirmed = await askConfirmation({
@@ -5023,10 +5023,10 @@ function generateQuarantinePdf() {
               <circle cx="18" cy="18" r="16.5" fill="#081326"/>
               <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
               <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-              <path d="M9 11h7.5v2.6h-4.8v3.5h3.8v2.5h-3.8V25H9V11z M18.5 11h4.6c2.4 0 4 1.3 4 3.6 0 1.6-.9 2.8-2.3 3.3l2.8 7.1h-2.9l-2.5-6.6h-1.1V25H18.5V11zm2.6 2.4v3.1h1.9c1 0 1.6-.6 1.6-1.5s-.6-1.6-1.6-1.6h-1.9z" fill="#FFFFFF"/>
+              <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
             </svg>
             <div>
-              <span class="report-eyebrow">FR MERCHANDISE OPERATIONS</span>
+              <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
               <h1 class="report-title">Branch Quarantine Report</h1>
               <p class="report-subtitle">Quality inspection, restock, supplier return, and scrap disposition audit</p>
             </div>
@@ -5111,7 +5111,7 @@ function generateQuarantinePdf() {
             <div class="sign-column"><div class="sign-line"></div><span class="sign-title">Prepared By (Inspector / Staff)</span><span class="sign-sub">Signature over printed name</span></div>
             <div class="sign-column"><div class="sign-line"></div><span class="sign-title">Audited &amp; Verified By</span><span class="sign-sub">Branch Manager / Operations</span></div>
           </div>
-          <div class="report-disclaimer"><p>FR MERCHANDISE SYSTEM-GENERATED QUARANTINE REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p></div>
+          <div class="report-disclaimer"><p>CAISHEN ENTERPRISES SYSTEM-GENERATED QUARANTINE REPORT &bull; CONFIDENTIAL &bull; ALL RIGHTS RESERVED</p></div>
         </footer>
       `;
     }
@@ -7689,8 +7689,8 @@ if (settingsBtn) {
 }
 
 // Sidebar & Responsive Navigation
-const SIDEBAR_COLLAPSED_KEY = 'fr-pos-sidebar-collapsed';
-const SIDEBAR_OPEN_KEY = 'fr-pos-sidebar-open';
+const SIDEBAR_COLLAPSED_KEY = 'ce-pos-sidebar-collapsed';
+const SIDEBAR_OPEN_KEY = 'ce-pos-sidebar-open';
 const appShell = $('.app-shell');
 const menuToggle = $('#menuToggle');
 const sidebar = $('#sidebar');

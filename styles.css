@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FR MERCHANDISE POS - DARK PEPSI MOTIF DESIGN SYSTEM
+   CAISHEN ENTERPRISES POS - DARK PEPSI MOTIF DESIGN SYSTEM
    ========================================================================== */
 
 :root {
@@ -236,7 +236,7 @@ body {
 }
 
 /* ==========================================================================
-   AUTHENTICATION SESSION SPLASH (FR MERCHANDISE)
+   AUTHENTICATION SESSION SPLASH (CAISHEN ENTERPRISES)
    ========================================================================== */
 .auth-session-splash {
   display: none;
@@ -306,7 +306,7 @@ body {
   border-radius: 50%;
 }
 
-.splash-fr-badge {
+.splash-ce-badge {
   position: relative;
   z-index: 1;
   width: 58px;
@@ -408,7 +408,7 @@ body {
     height: 64px;
     margin-bottom: 18px;
   }
-  .splash-fr-badge {
+  .splash-ce-badge {
     width: 50px;
     height: 50px;
   }
@@ -827,7 +827,7 @@ body::after {
 }
 
 .pepsi-badge,
-.fr-badge {
+.ce-badge {
   display: block;
   width: 36px;
   height: 36px;
@@ -836,7 +836,7 @@ body::after {
 }
 
 .brand:hover .pepsi-badge,
-.brand:hover .fr-badge {
+.brand:hover .ce-badge {
   transform: rotate(8deg) scale(1.05);
 }
 

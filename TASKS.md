@@ -1,4 +1,4 @@
-# FR Merchandise POS Tasks
+# Caishen Enterprises POS Tasks
 
 ## Completed In Code
 

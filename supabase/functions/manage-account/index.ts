@@ -118,7 +118,7 @@ Deno.serve(async (request) => {
   if (action === 'restoreOperationalBackup') {
     if (body.confirmation !== 'RESTORE') return fail('Restore confirmation is required.');
     const backup = body.backup;
-    if (!backup || backup.schemaVersion !== '1' || typeof backup.tables !== 'object') return fail('Choose a valid FR Merchandise POS backup file.');
+    if (!backup || backup.schemaVersion !== '1' || typeof backup.tables !== 'object') return fail('Choose a valid Caishen Enterprises POS backup file.');
     const { data, error } = await admin.rpc('restore_pos_backup_daily_operations', { backup });
     if (error) return fail(error.message);
     await audit('Restored operational backup', actorId, String(backup.createdAt || ''));

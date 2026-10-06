@@ -1,5 +1,5 @@
 const SPREADSHEET_ID = '1HYt8MOZJ0JchXLCpAp5V5ypQ3-MRUMpmKlPWMlVVvPg';
-const APP_DATA_VERSION_KEY = 'fr_pos_app_data_version';
+const APP_DATA_VERSION_KEY = 'ce_pos_app_data_version';
 
 const SHEETS = {
   Branches: ['branch_id', 'name', 'type', 'address', 'status'],
