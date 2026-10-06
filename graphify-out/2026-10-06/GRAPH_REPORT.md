@@ -1,9 +1,9 @@
-# Graph Report - caishen-web  (2026-10-06)
+# Graph Report - frmerchandise  (2026-10-05)
 
 ## Corpus Check
-- 64 files · ~99,881 words
+- 64 files · ~90,161 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 12 file(s) not represented in the graph (top: (none) 3, .css 3, .graphify-bak 1)
+- Unclassified: 11 file(s) not represented in the graph (top: (none) 3, .css 3, .graphify-bak 1)
 
 ## Summary
 - 287 nodes · 638 edges · 27 communities (20 shown, 7 thin omitted)
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `287a1c94`
+- Built from commit: `b7ffb095`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

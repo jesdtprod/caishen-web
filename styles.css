@@ -1,9 +1,9 @@
 /* ==========================================================================
-   CAISHEN ENTERPRISES POS - DARK PEPSI MOTIF DESIGN SYSTEM
+   CAISHEN ENTERPRISES POS - CE BRAND DESIGN SYSTEM (ROYAL BLUE & EMERALD GREEN)
    ========================================================================== */
 
 :root {
-  /* Pepsi Dark Palette Canvas & Surfaces */
+  /* CE Dark Palette Canvas & Surfaces */
   --bg-midnight: #060b14;
   --bg-obsidian: #0b1426;
   --bg-card: #0f1c34;
@@ -11,13 +11,34 @@
   --bg-hover: #1c3057;
   --bg-input: #0a1222;
 
-  /* Pepsi Iconic Brand Colors */
-  --pepsi-blue: #0066f5;
-  --pepsi-blue-hover: #0050d8;
-  --pepsi-blue-dark: #00368a;
-  --pepsi-blue-gradient: linear-gradient(135deg, #0050d8 0%, #0076ff 100%);
-  --pepsi-blue-glow: rgba(0, 102, 245, 0.35);
-  --pepsi-blue-glow-subtle: rgba(0, 102, 245, 0.15);
+  /* CE Brand Colors (Aligned with ce-logo.png) */
+  --ce-blue: #0066f5;
+  --ce-blue-hover: #0050d8;
+  --ce-blue-dark: #00368a;
+  --ce-blue-light: #38bdf8;
+  --ce-blue-gradient: linear-gradient(135deg, #0050d8 0%, #0076ff 100%);
+  --ce-blue-glow: rgba(0, 102, 245, 0.35);
+  --ce-blue-glow-subtle: rgba(0, 102, 245, 0.15);
+
+  /* CE Vibrant Emerald / Leaf Green (Letter 'E') */
+  --ce-green: #56b828;
+  --ce-green-hover: #489e20;
+  --ce-green-light: #6dc836;
+  --ce-green-gradient: linear-gradient(135deg, #489e20 0%, #56b828 50%, #6dc836 100%);
+  --ce-green-glow: rgba(86, 184, 40, 0.35);
+  --ce-green-glow-subtle: rgba(86, 184, 40, 0.15);
+
+  /* Duo Brand Gradient */
+  --ce-brand-gradient: linear-gradient(135deg, #0066f5 0%, #0284c7 40%, #56b828 100%);
+
+  /* Backward Compatibility Aliases */
+  --pepsi-blue: var(--ce-blue);
+  --pepsi-blue-hover: var(--ce-blue-hover);
+  --pepsi-blue-dark: var(--ce-blue-dark);
+  --pepsi-blue-light: var(--ce-blue-light);
+  --pepsi-blue-gradient: var(--ce-blue-gradient);
+  --pepsi-blue-glow: var(--ce-blue-glow);
+  --pepsi-blue-glow-subtle: var(--ce-blue-glow-subtle);
 
   --pepsi-red: #e32934;
   --pepsi-red-hover: #c41e28;
@@ -34,12 +55,13 @@
   /* Borders & Dividers */
   --border-subtle: rgba(255, 255, 255, 0.08);
   --border-card: rgba(30, 58, 102, 0.55);
-  --border-focus: #0066f5;
+  --border-focus: var(--ce-blue);
+  --border-green: rgba(86, 184, 40, 0.4);
   --border-red: rgba(227, 41, 52, 0.4);
 
   /* Status Colors */
-  --status-in-stock: #10b981;
-  --status-in-stock-bg: rgba(16, 185, 129, 0.12);
+  --status-in-stock: var(--ce-green);
+  --status-in-stock-bg: rgba(86, 184, 40, 0.14);
   --status-low-stock: #ff385c;
   --status-low-stock-bg: rgba(255, 56, 92, 0.15);
 
@@ -292,7 +314,7 @@ body {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0%, #0066f5 40%, #38bdf8 65%, #e32934 90%, transparent 100%);
+  background: conic-gradient(from 0deg, transparent 0%, #0066f5 35%, #38bdf8 55%, #56b828 85%, transparent 100%);
   animation: spinClockwise 1.8s linear infinite;
   filter: blur(3px);
   opacity: 0.85;
@@ -306,12 +328,14 @@ body {
   border-radius: 50%;
 }
 
+.splash-ce-logo,
 .splash-ce-badge {
   position: relative;
   z-index: 1;
-  width: 58px;
-  height: 58px;
-  filter: drop-shadow(0 0 16px rgba(0, 102, 245, 0.6));
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(0, 102, 245, 0.6)) drop-shadow(0 0 10px rgba(86, 184, 40, 0.4));
   animation: splashBadgePulse 3s infinite ease-in-out;
 }
 
@@ -369,8 +393,8 @@ body {
   bottom: 0;
   width: 45%;
   border-radius: 100px;
-  background: linear-gradient(90deg, #0066f5 0%, #38bdf8 50%, #e32934 100%);
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.7);
+  background: linear-gradient(90deg, #0066f5 0%, #38bdf8 45%, #56b828 100%);
+  box-shadow: 0 0 12px rgba(86, 184, 40, 0.7);
   animation: splashGlide 1.6s infinite cubic-bezier(0.45, 0, 0.55, 1);
 }
 
@@ -826,18 +850,21 @@ body::after {
   transition: transform var(--transition-fast);
 }
 
+.ce-logo-img,
 .pepsi-badge,
 .ce-badge {
   display: block;
   width: 36px;
   height: 36px;
-  filter: drop-shadow(0 0 10px var(--pepsi-blue-glow));
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px rgba(0, 102, 245, 0.45));
   transition: transform var(--transition-normal);
 }
 
+.brand:hover .ce-logo-img,
 .brand:hover .pepsi-badge,
 .brand:hover .ce-badge {
-  transform: rotate(8deg) scale(1.05);
+  transform: rotate(4deg) scale(1.08);
 }
 
 .brand-text {
@@ -13848,9 +13875,12 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
     padding-top: 0 !important;
   }
 
-  .report-badge-svg {
+  .report-badge-svg,
+  .report-badge-img {
     width: 38px;
     height: 38px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .report-eyebrow {

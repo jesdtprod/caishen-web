@@ -7,6 +7,8 @@ const APP_SHELL = [
   './app.js',
   './supabase-config.js',
   './favicon.svg',
+  './favicon.ico',
+  './assets/ce-logo.png',
   './manifest.webmanifest'
 ];
 

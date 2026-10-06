@@ -445,11 +445,13 @@ function getReportDocumentHtml_(htmlContent, title = 'Report', isExport = false)
       align-items: center;
       gap: 12px;
     }
-    .report-badge-svg {
+    .report-badge-svg,
+    .report-badge-img {
       width: 42px !important;
       height: 42px !important;
       max-width: 42px !important;
       max-height: 42px !important;
+      object-fit: contain !important;
       flex-shrink: 0 !important;
     }
     .report-eyebrow {
@@ -843,12 +845,7 @@ function renderReportRunningHeader(branchName, periodText, reportTitle = 'Branch
   return `
     <header class="report-running-header">
       <div class="running-header-brand">
-        <svg viewBox="0 0 36 36" class="report-badge-svg" width="26" height="26" style="width:26px;height:26px;max-width:26px;max-height:26px;flex-shrink:0;" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="18" cy="18" r="16.5" fill="#081326"/>
-          <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
-          <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-          <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
-        </svg>
+        <img src="assets/ce-logo.png" class="report-badge-img" width="26" height="26" style="width:26px;height:26px;max-width:26px;max-height:26px;object-fit:contain;flex-shrink:0;" alt="Caishen Enterprises" />
         <div>
           <span class="running-brand-title">CAISHEN ENTERPRISES &bull; ${escapeHtml(reportTitle)}</span>
           <span class="running-brand-sub">${escapeHtml(branchName)} &bull; ${escapeHtml(periodText)}</span>
@@ -999,12 +996,7 @@ function buildSalesPdfReport_() {
         <header class="report-header">
           <div class="report-brand-wrap">
             <div class="report-logo">
-              <svg viewBox="0 0 36 36" class="report-badge-svg" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;flex-shrink:0;" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="18" cy="18" r="16.5" fill="#081326"/>
-                <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
-                <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-                <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
-              </svg>
+              <img src="assets/ce-logo.png" class="report-badge-img" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;object-fit:contain;flex-shrink:0;" alt="Caishen Enterprises" />
             </div>
             <div>
               <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
@@ -1513,12 +1505,7 @@ function generateInventoryReportPdf() {
       pageContentHtml += `
         <header class="report-header">
           <div class="report-brand-wrap">
-            <svg viewBox="0 0 36 36" class="report-badge-svg" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;flex-shrink:0;" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="18" cy="18" r="16.5" fill="#081326"/>
-              <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
-              <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-              <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
-            </svg>
+            <img src="assets/ce-logo.png" class="report-badge-img" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;object-fit:contain;flex-shrink:0;" alt="Caishen Enterprises" />
             <div>
               <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
               <h1 class="report-title">Branch Inventory Report</h1>
@@ -5019,12 +5006,7 @@ function generateQuarantinePdf() {
       pageContentHtml += `
         <header class="report-header">
           <div class="report-brand-wrap">
-            <svg viewBox="0 0 36 36" class="report-badge-svg" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;flex-shrink:0;" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="18" cy="18" r="16.5" fill="#081326"/>
-              <path d="M 2.5 18 A 15.5 15.5 0 0 1 33.5 18" stroke="#E32934" stroke-width="2.6"/>
-              <path d="M 33.5 18 A 15.5 15.5 0 0 1 2.5 18" stroke="#0066F5" stroke-width="2.6"/>
-              <path d="M15.5 12.8c-.8-.5-1.7-.8-2.8-.8-2.6 0-4.4 1.8-4.4 4.5s1.8 4.5 4.4 4.5c1.1 0 2-.3 2.8-.8v2.9c-.9.5-1.9.7-3.1.7-4.1 0-6.9-2.9-6.9-7.3s2.8-7.3 6.9-7.3c1.2 0 2.3.3 3.1.7v2.9z M18.3 9.6h9.1v2.7h-6.1v2.8h5.3v2.6h-5.3v3h6.2v2.7h-9.2V9.6z" fill="#FFFFFF"/>
-            </svg>
+            <img src="assets/ce-logo.png" class="report-badge-img" width="42" height="42" style="width:42px;height:42px;max-width:42px;max-height:42px;object-fit:contain;flex-shrink:0;" alt="Caishen Enterprises" />
             <div>
               <span class="report-eyebrow">CAISHEN ENTERPRISES OPERATIONS</span>
               <h1 class="report-title">Branch Quarantine Report</h1>
