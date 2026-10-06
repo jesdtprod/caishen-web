@@ -1,0 +1,22 @@
+/* Financial cards precede operational alerts in dashboard and report grids. */
+.dashboard-summary-grid > .kpi-revenue { order: 1; }
+.dashboard-summary-grid > .kpi-cash { order: 2; }
+.dashboard-summary-grid > .kpi-credit { order: 3; }
+.dashboard-summary-grid > .kpi-cashonhand { order: 4; }
+.dashboard-summary-grid > .kpi-netsales { order: 5; }
+.dashboard-summary-grid > .kpi-expense { order: 6; }
+.dashboard-summary-grid > .kpi-income { order: 7; }
+.dashboard-summary-grid > .kpi-stock { order: 8; }
+
+.report-kpi-grid > .report-kpi-card:nth-child(1) { order: 1; }
+.report-kpi-grid > .report-kpi-card:nth-child(2) { order: 2; }
+.report-kpi-grid > .report-kpi-card:nth-child(3) { order: 3; }
+.report-kpi-grid > .report-kpi-card:nth-child(9) { order: 4; }
+.report-kpi-grid > .report-kpi-card:nth-child(6) { order: 5; }
+.report-kpi-grid > .report-kpi-card:nth-child(10) { order: 6; }
+.report-kpi-grid > .report-kpi-card:nth-child(11) { order: 7; }
+.report-kpi-grid > .report-kpi-card:nth-child(12) { order: 8; }
+.report-kpi-grid > .report-kpi-card:nth-child(4) { order: 9; }
+.report-kpi-grid > .report-kpi-card:nth-child(5) { order: 10; }
+.report-kpi-grid > .report-kpi-card:nth-child(7) { order: 11; }
+.report-kpi-grid > .report-kpi-card:nth-child(8) { order: 12; }

@@ -1,0 +1,17 @@
+.return-item-group { margin-top: 10px; border-radius: 11px; }
+.return-item-group.bundle-group { overflow: hidden; border: 1px solid rgba(0, 102, 245, .3); background: rgba(11, 22, 44, .65); }
+.bundle-group-header, .single-item-row, .bundle-component-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bundle-group-header { padding: 11px 15px; background: rgba(0, 102, 245, .08); border-bottom: 1px solid rgba(0, 102, 245, .18); }
+.bundle-group-info, .bundle-component-info, .single-item-info, .sale-return-resolution-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.bundle-group-name, .single-item-name { font-size: 14px; font-weight: 800; color: var(--text-pure); }
+.bundle-group-badge, .item-type-pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.bundle-group-badge, .item-type-pill.bundle { color: #fbbf24; background: rgba(245, 158, 11, .12); border: 1px solid rgba(245, 158, 11, .3); }
+.item-type-pill { display: inline-flex; gap: 5px; text-transform: uppercase; letter-spacing: .35px; }
+.item-type-pill svg { width: 12px; height: 12px; }
+.item-type-pill.individual { color: #38bdf8; background: rgba(56, 189, 248, .12); border: 1px solid rgba(56, 189, 248, .3); }
+.bundle-components-list { display: grid; gap: 6px; padding: 8px 14px 10px; }
+.bundle-component-row { padding: 8px 10px; border: 1px solid rgba(255, 255, 255, .06); border-radius: 8px; background: rgba(255, 255, 255, .02); }
+.bundle-tree-indicator { color: #38bdf8; font-weight: 800; }.bundle-component-name { color: var(--text-primary); font-size: 13px; font-weight: 700; }
+.return-item-group.single-group { padding: 10px 14px; border: 1px solid rgba(255, 255, 255, .08); background: rgba(8, 16, 32, .55); }
+.return-item-group.is-resolved, .bundle-component-row.is-resolved { opacity: .8; }
+@media (max-width: 640px) { .bundle-group-header, .bundle-component-row, .single-item-row { align-items: flex-start; flex-direction: column; } .sale-return-resolution-actions { align-self: flex-end; } }

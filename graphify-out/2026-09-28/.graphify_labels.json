@@ -1,0 +1,20 @@
+{
+  "0": "app.js",
+  "1": "api",
+  "2": "renderDashboard",
+  "3": "escapeHtml",
+  "4": "money",
+  "5": "FR Merchandise POS",
+  "6": "initCustomDropdowns",
+  "7": "renderCart",
+  "8": "initCustomDatePickers",
+  "9": "index.ts",
+  "10": "check-pos.mjs",
+  "11": "isMobileScreen",
+  "12": "compilerOptions",
+  "13": "alignTableBadges",
+  "14": "renderStockInHistoryTable",
+  "15": "service-worker.js",
+  "16": "supabase-config.js",
+  "17": "graphify-hook-test.js"
+}
