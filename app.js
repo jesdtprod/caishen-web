@@ -41,6 +41,13 @@ let toastTimer = null;
 let refreshInFlight = false;
 let pendingTransferReceipt = null;
 let activeQuarantineFilter = 'all';
+let dashboardDate = formatDateInput(new Date());
+const TABLE_PAGE_SIZE = 10;
+const PRODUCTS_PAGE_SIZE = 10;
+let productsCurrentPage = 1;
+let lastProductSearchTerm = '';
+const viewCurrentPages = {};
+const viewLastSearchTerms = {};
 
 // Utility: debounce — delays fn execution until after `wait` ms of silence
 function debounce(fn, wait = 150) {
@@ -155,8 +162,9 @@ function ensureSalesDateDefaults() {
   if (!dateFrom || !dateTo) return;
 
   const today = new Date();
-  if (!dateFrom.value) dateFrom.value = formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1));
-  if (!dateTo.value) dateTo.value = formatDateInput(today);
+  const todayStr = formatDateInput(today);
+  if (!dateFrom.value) dateFrom.value = todayStr;
+  if (!dateTo.value) dateTo.value = todayStr;
   syncCustomDatePicker(dateFrom);
   syncCustomDatePicker(dateTo);
 }
@@ -173,9 +181,69 @@ function ensureQuarantineDateDefaults() {
   syncCustomDatePicker(dateTo);
 }
 
+function ensureTransfersDateDefaults() {
+  const dateFrom = $('#transfersDateFrom');
+  const dateTo = $('#transfersDateTo');
+  if (!dateFrom || !dateTo) return;
+
+  const today = new Date();
+  const todayStr = formatDateInput(today);
+  if (!dateFrom.value) dateFrom.value = todayStr;
+  if (!dateTo.value) dateTo.value = todayStr;
+  syncCustomDatePicker(dateFrom);
+  syncCustomDatePicker(dateTo);
+}
+
+function ensureDailySpotCashDateDefaults() {
+  const dateFrom = $('#dailySpotCashDateFrom');
+  const dateTo = $('#dailySpotCashDateTo');
+  if (!dateFrom || !dateTo) return;
+
+  const today = new Date();
+  const todayStr = formatDateInput(today);
+  if (!dateFrom.value) dateFrom.value = todayStr;
+  if (!dateTo.value) dateTo.value = todayStr;
+  syncCustomDatePicker(dateFrom);
+  syncCustomDatePicker(dateTo);
+}
+
+function ensureDailyExpensesDateDefaults() {
+  const dateFrom = $('#dailyExpensesDateFrom');
+  const dateTo = $('#dailyExpensesDateTo');
+  if (!dateFrom || !dateTo) return;
+
+  const today = new Date();
+  const todayStr = formatDateInput(today);
+  if (!dateFrom.value) dateFrom.value = todayStr;
+  if (!dateTo.value) dateTo.value = todayStr;
+  syncCustomDatePicker(dateFrom);
+  syncCustomDatePicker(dateTo);
+}
+
+function ensureCreditsDateDefaults() {
+  const dateFrom = $('#creditsDateFrom');
+  const dateTo = $('#creditsDateTo');
+  if (!dateFrom || !dateTo) return;
+
+  const today = new Date();
+  const todayStr = formatDateInput(today);
+  if (!dateFrom.value) dateFrom.value = todayStr;
+  if (!dateTo.value) dateTo.value = todayStr;
+  syncCustomDatePicker(dateFrom);
+  syncCustomDatePicker(dateTo);
+}
+
 function saleDateKey(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? '' : formatDateInput(date);
+}
+
+function getCustomerInitials(name) {
+  const clean = displayCustomerName(name).replace(/[^a-zA-Z0-9\s]/g, '').trim();
+  if (!clean || clean.toLowerCase() === 'walk-in customer') return 'WC';
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
 function calculateOutstandingCreditAccounts(sales, payments, openingAccounts = []) {
@@ -1662,6 +1730,14 @@ function throwIfError_(error) {
   if (error) throw new Error(error.message || 'Supabase request failed.');
 }
 
+function withTimeout_(promise, milliseconds, message) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), milliseconds);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
+}
+
 async function throwIfFunctionError_(error) {
   if (!error) return;
   let message = error.message || 'Supabase function failed.';
@@ -2266,7 +2342,7 @@ function renderSkeletonTable() {
     : activeView === 'dailyExpenses'
     ? ['Business Date', 'Category', 'Amount', 'Description & Receipt', 'Action']
     : activeView === 'credits'
-    ? ['Customer', 'Credit Sale', 'Credit Date', 'Item Count', 'Credit Amount']
+    ? ['Customer', 'Credit Sale', 'Credit Date', 'Item Count', 'Credit Amount', 'Action']
     : activeView === 'sales'
     ? ['Receipt', 'Date and Time', 'Customer', 'Payment', 'Total', 'Action']
     : activeView === 'staffAccounts'
@@ -2339,10 +2415,10 @@ function renderSkeletonTable() {
     }
     if (activeView === 'credits') {
       return `
-        <div><div class="skeleton-shimmer skeleton-line text" style="width:105px;"></div></div>
+        <div class="skeleton-col"><div class="skeleton-shimmer skeleton-line title" style="width:110px;"></div><div class="skeleton-shimmer skeleton-line meta" style="width:75px;"></div></div>
         <div><div class="skeleton-shimmer skeleton-line text" style="width:90px;"></div></div>
-        <div><div class="skeleton-shimmer skeleton-line qty" style="width:50px;"></div></div>
-        <div><div class="skeleton-shimmer skeleton-line price" style="width:80px;"></div></div>
+        <div><div class="skeleton-shimmer skeleton-line pill" style="width:70px;height:24px;border-radius:9999px;"></div></div>
+        <div class="skeleton-col"><div class="skeleton-shimmer skeleton-line price" style="width:90px;"></div><div class="skeleton-shimmer skeleton-line meta" style="width:65px;"></div></div>
       `;
     }
     if (activeView === 'sales') {
@@ -2389,10 +2465,19 @@ function renderSkeletonTable() {
     `;
   };
 
-  const hasAction = !['inventory', 'inventoryReports', 'credits', 'quarantineReport'].includes(activeView);
+  const hasAction = !['inventory', 'inventoryReports', 'quarantineReport'].includes(activeView);
 
   const getSkeletonActionCell = () => {
     if (!hasAction) return '';
+    if (activeView === 'credits') {
+      return `
+        <div class="row-action-cell skeleton-action-cell">
+          <span class="table-actions" style="display:flex;align-items:center;justify-content:center;width:100%;">
+            <div class="skeleton-shimmer skeleton-line btn" style="width:32px;height:32px;border-radius:9px;margin:0 auto;"></div>
+          </span>
+        </div>
+      `;
+    }
     if (activeView === 'products' || activeView === 'staffAccounts' || activeView === 'customers' || activeView === 'sales') {
       return `
         <div class="row-action-cell skeleton-action-cell">
@@ -3019,7 +3104,7 @@ function initCustomDatePickers(container = document) {
       const todayDate = today.getDate();
 
       const selectedIso = input.value || '';
-      const isDateFrom = input.id === 'salesDateFrom' || input.id === 'quarantineDateFrom';
+      const isDateFrom = input.id === 'salesDateFrom' || input.id === 'quarantineDateFrom' || input.id === 'transfersDateFrom' || input.id === 'dailySpotCashDateFrom' || input.id === 'dailyExpensesDateFrom' || input.id === 'creditsDateFrom';
       const otherInput = input.id === 'salesDateFrom'
         ? $('#salesDateTo')
         : input.id === 'salesDateTo'
@@ -3028,6 +3113,22 @@ function initCustomDatePickers(container = document) {
         ? $('#quarantineDateTo')
         : input.id === 'quarantineDateTo'
         ? $('#quarantineDateFrom')
+        : input.id === 'transfersDateFrom'
+        ? $('#transfersDateTo')
+        : input.id === 'transfersDateTo'
+        ? $('#transfersDateFrom')
+        : input.id === 'dailySpotCashDateFrom'
+        ? $('#dailySpotCashDateTo')
+        : input.id === 'dailySpotCashDateTo'
+        ? $('#dailySpotCashDateFrom')
+        : input.id === 'dailyExpensesDateFrom'
+        ? $('#dailyExpensesDateTo')
+        : input.id === 'dailyExpensesDateTo'
+        ? $('#dailyExpensesDateFrom')
+        : input.id === 'creditsDateFrom'
+        ? $('#creditsDateTo')
+        : input.id === 'creditsDateTo'
+        ? $('#creditsDateFrom')
         : null;
       const otherIso = otherInput?.value || '';
 
@@ -3266,6 +3367,10 @@ function openDatePicker(wrapper, trigger, popover) {
 
   const parentGroup = wrapper.closest('.form-field-group');
   if (parentGroup) parentGroup.classList.add('has-open-datepicker');
+  const dateFilter = wrapper.closest('.dashboard-date-filter');
+  if (dateFilter) dateFilter.classList.add('has-open-datepicker');
+  const banner = wrapper.closest('.dashboard-header-banner');
+  if (banner) banner.classList.add('has-open-datepicker');
   const dialog = wrapper.closest('dialog');
   if (dialog) {
     dialog.classList.add('has-open-datepicker');
@@ -3282,7 +3387,8 @@ function openDatePicker(wrapper, trigger, popover) {
     const opensUp = spaceBelow < 330 && spaceAbove > spaceBelow;
     popover.classList.toggle('opens-up', opensUp);
 
-    if (triggerRect.right + 296 > window.innerWidth - 16 || triggerRect.left + 296 > window.innerWidth - 16) {
+    const isDashboard = Boolean(wrapper.closest('.dashboard-date-filter'));
+    if (isDashboard || triggerRect.right + 296 > window.innerWidth - 16 || triggerRect.left + 296 > window.innerWidth - 16) {
       popover.classList.add('anchor-right');
     } else {
       popover.classList.remove('anchor-right');
@@ -3296,6 +3402,10 @@ function closeDatePicker(wrapper, trigger) {
 
   const parentGroup = wrapper.closest('.form-field-group');
   if (parentGroup) parentGroup.classList.remove('has-open-datepicker');
+  const dateFilter = wrapper.closest('.dashboard-date-filter');
+  if (dateFilter) dateFilter.classList.remove('has-open-datepicker');
+  const banner = wrapper.closest('.dashboard-header-banner');
+  if (banner) banner.classList.remove('has-open-datepicker');
   const dialog = wrapper.closest('dialog');
   if (dialog) {
     dialog.classList.remove('has-open-datepicker');
@@ -3389,7 +3499,10 @@ function renderInventoryReports() {
   const table = $('#inventoryTable');
   if (!table) return;
 
-  const rows = getInventoryReportRows();
+  const allRows = getInventoryReportRows();
+  const pagination = paginateItems_(allRows);
+  const rows = pagination.pagedItems;
+  const paginationHtml = renderPaginationControls_(pagination, 'report records');
 
   table.innerHTML = `
     <div class="table-row table-header"><span>Product</span><span>Qty Sold</span><span>Qty Stock In</span><span>Qty Transfer</span><span>Qty Remaining</span><span>Status</span></div>
@@ -3408,7 +3521,9 @@ function renderInventoryReports() {
         </div>
       </div>`;
     }).join('') || '<div class="empty-state"><p>No products found</p><small>Try adjusting your search query.</small></div>'}
+    ${paginationHtml}
   `;
+  bindPaginationEvents_(table);
 }
 
 const STAFF_MENU_DEFS = {
@@ -3484,7 +3599,10 @@ function renderStaffAccounts() {
   const table = $('#inventoryTable');
   if (!table) return;
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
-  const rows = sortByName_(staffAccounts.filter((staff) => `${staff.fullName} ${staff.username}`.toLowerCase().includes(term)), 'fullName');
+  const allRows = sortByName_(staffAccounts.filter((staff) => `${staff.fullName} ${staff.username}`.toLowerCase().includes(term)), 'fullName');
+  const pagination = paginateItems_(allRows);
+  const rows = pagination.pagedItems;
+  const paginationHtml = renderPaginationControls_(pagination, 'staff accounts');
   table.innerHTML = `
     <div class="table-row table-header"><span>Staff Account</span><span>Assigned Branch</span><span>Menu Access</span><span>Status</span><span>Action</span></div>
     ${rows.map((staff) => {
@@ -3502,7 +3620,9 @@ function renderStaffAccounts() {
           <button class="icon-button ${staff.status === 'Active' ? 'danger-icon' : 'primary-icon'}" data-toggle-staff="${staff.id}" aria-label="${staff.status === 'Active' ? 'Deactivate' : 'Reactivate'} ${escapeHtml(staff.fullName)}" title="${staff.status === 'Active' ? 'Deactivate' : 'Reactivate'} account"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${staff.status === 'Active' ? '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="m17 8 5 5m0-5-5 5"/>' : '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="m16 12 2 2 4-4"/>'}</svg></button>
         </span></div></div>`;
     }).join('') || '<div class="empty-state"><p>No staff accounts found</p><small>Add a staff account to assign a branch and allowed menus.</small></div>'}
+    ${paginationHtml}
   `;
+  bindPaginationEvents_(table);
   table.querySelectorAll('[data-edit-staff]').forEach((button) => button.addEventListener('click', () => openForm('editStaff', button.dataset.editStaff)));
   table.querySelectorAll('[data-toggle-staff]').forEach((button) => button.addEventListener('click', () => toggleStaffStatus(button.dataset.toggleStaff)));
   table.querySelectorAll('[data-reset-staff]').forEach((button) => button.addEventListener('click', () => resetStaffPassword(button.dataset.resetStaff)));
@@ -3584,7 +3704,11 @@ function renderAdminAccount() {
       </div>
     </div>
   `;
-  table.innerHTML = `<div class="table-row table-header"><span>Administrator</span><span>Username</span><span>Access</span><span>Status</span><span>Action</span></div>${sortByName_(adminAccounts, 'fullName').map((account) => `<div class="table-row">
+  const allAccounts = sortByName_(adminAccounts, 'fullName');
+  const pagination = paginateItems_(allAccounts);
+  const rows = pagination.pagedItems;
+  const paginationHtml = renderPaginationControls_(pagination, 'administrators');
+  table.innerHTML = `<div class="table-row table-header"><span>Administrator</span><span>Username</span><span>Access</span><span>Status</span><span>Action</span></div>${rows.map((account) => `<div class="table-row">
     <div class="product-cell"><strong class="product-name">${escapeHtml(account.fullName)}</strong><span class="product-meta">Administrator account</span></div>
     <div class="row-middle-cells">
       <span>${escapeHtml(account.username)}</span>
@@ -3592,7 +3716,9 @@ function renderAdminAccount() {
       <span class="stock-pill ${account.status === 'Active' ? 'stock-normal' : 'stock-low'}">${escapeHtml(account.status)}</span>
     </div>
     <div class="row-action-cell"><span class="table-actions"><button class="icon-button" data-edit-admin="${account.id}" aria-label="Edit ${escapeHtml(account.fullName)}" title="Edit administrator"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button>${account.id !== currentSession?.account?.id ? `<button class="icon-button ${account.status === 'Active' ? 'danger-icon' : 'primary-icon'}" data-toggle-admin="${account.id}" aria-label="${account.status === 'Active' ? 'Deactivate' : 'Reactivate'} ${escapeHtml(account.fullName)}" title="${account.status === 'Active' ? 'Deactivate administrator' : 'Reactivate administrator'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${account.status === 'Active' ? '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="m17 8 5 5m0-5-5 5"/>' : '<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/><path d="m16 12 2 2 4-4"/>'}</svg></button>` : ''}</span></div>
-  </div>`).join('') || '<div class="empty-state"><p>No administrator accounts found</p></div>'}`;
+  </div>`).join('') || '<div class="empty-state"><p>No administrator accounts found</p></div>'}
+  ${paginationHtml}`;
+  bindPaginationEvents_(table);
   table.querySelectorAll('[data-edit-admin]').forEach((button) => button.addEventListener('click', () => openForm('editAdmin', button.dataset.editAdmin)));
   table.querySelectorAll('[data-toggle-admin]').forEach((button) => button.addEventListener('click', () => toggleAdminStatus(button.dataset.toggleAdmin)));
   $('#downloadBackupButton')?.addEventListener('click', downloadOperationalBackup);
@@ -3702,13 +3828,28 @@ async function toggleAdminStatus(adminId) {
   } catch (error) { showToast(error.message, 'error'); }
 }
 
+const DASHBOARD_PAGE_SIZE = 5;
+let dashboardSalesCurrentPage = 1;
+let dashboardStockWarningsCurrentPage = 1;
+let dashboardTransfersCurrentPage = 1;
+let dashboardLastActiveDate = null;
+
 function renderDashboard() {
   const dashboard = $('#dashboard');
   if (!dashboard) return;
   const completedSales = salesHistory.filter((sale) => String(sale.status || 'completed').toLowerCase() !== 'cancelled');
-  const today = new Date();
+  const selectedDate = dashboardDate ? new Date(`${dashboardDate}T00:00:00`) : new Date();
+  const selectedDateKey = formatDateInput(selectedDate);
+
+  if (selectedDateKey !== dashboardLastActiveDate) {
+    dashboardSalesCurrentPage = 1;
+    dashboardStockWarningsCurrentPage = 1;
+    dashboardTransfersCurrentPage = 1;
+    dashboardLastActiveDate = selectedDateKey;
+  }
+
   const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (6 - index));
+    const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - (6 - index));
     return {
       key: formatDateInput(date),
       label: date.toLocaleDateString('en-PH', { weekday: 'short' }),
@@ -3723,29 +3864,28 @@ function renderDashboard() {
     if (day) { day.total += Number(sale.total || 0); day.transactions += 1; }
   });
   const periodSalesRecords = completedSales.filter((sale) => dayMap[saleDateKey(sale.date)]);
-  const todayKey = formatDateInput(today);
-  const todaySalesRecords = completedSales.filter((sale) => saleDateKey(sale.date) === todayKey);
-  const todaySales = todaySalesRecords.reduce((total, sale) => total + Number(sale.total || 0), 0);
-  const todayCashCollected = todaySalesRecords.filter((sale) => sale.paymentType === 'cash').reduce((total, sale) => total + Number(sale.total || 0), 0);
-  const todayDiscount = todaySalesRecords.reduce((total, sale) => total + Number(sale.discount || 0), 0);
-  const todayCreditSales = todaySalesRecords.filter((sale) => sale.paymentType === 'credit').reduce((total, sale) => total + Number(sale.total || 0), 0);
+  const selectedSalesRecords = completedSales.filter((sale) => saleDateKey(sale.date) === selectedDateKey);
+  const selectedSales = selectedSalesRecords.reduce((total, sale) => total + Number(sale.total || 0), 0);
+  const selectedCashCollected = selectedSalesRecords.filter((sale) => sale.paymentType === 'cash').reduce((total, sale) => total + Number(sale.total || 0), 0);
+  const selectedDiscount = selectedSalesRecords.reduce((total, sale) => total + Number(sale.discount || 0), 0);
+  const selectedCreditSales = selectedSalesRecords.filter((sale) => sale.paymentType === 'credit').reduce((total, sale) => total + Number(sale.total || 0), 0);
   const creditOutstanding = creditAccounts.reduce((total, account) => total + Number(account.balance || 0), 0);
 
-  const todayExpenses = dailyExpenses
-    .filter((item) => item.businessDate === todayKey)
+  const selectedExpenses = dailyExpenses
+    .filter((item) => item.businessDate === selectedDateKey)
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const todayExpenseRecords = dailyExpenses.filter((item) => item.businessDate === todayKey);
-  const todaySpotCash = dailySpotCash
-    .filter((item) => item.businessDate === todayKey)
+  const selectedExpenseRecords = dailyExpenses.filter((item) => item.businessDate === selectedDateKey);
+  const selectedSpotCash = dailySpotCash
+    .filter((item) => item.businessDate === selectedDateKey)
     .reduce((sum, item) => sum + Number(item.openingCash || 0), 0);
-  const todayCashOnHand = todayCashCollected + todaySpotCash - todayExpenses;
-  const todayNetSales = Math.max(todaySales - todayExpenses, 0);
-  const todayNetIncome = todayNetSales * 0.20;
+  const selectedCashOnHand = selectedCashCollected + selectedSpotCash - selectedExpenses;
+  const selectedNetSales = Math.max(selectedSales - selectedExpenses, 0);
+  const selectedNetIncome = selectedNetSales * 0.20;
 
   const sevenDayTotal = days.reduce((sum, d) => sum + d.total, 0);
   const sevenDayAvg = Math.round(sevenDayTotal / 7);
-  const todayAvgTicket = todaySalesRecords.length > 0 ? Math.round(todaySales / todaySalesRecords.length) : 0;
-  const cashRatio = todaySales > 0 ? Math.min(Math.round((todayCashCollected / todaySales) * 100), 100) : 0;
+  const selectedAvgTicket = selectedSalesRecords.length > 0 ? Math.round(selectedSales / selectedSalesRecords.length) : 0;
+  const cashRatio = selectedSales > 0 ? Math.min(Math.round((selectedCashCollected / selectedSales) * 100), 100) : 0;
 
   const maxDayTotal = Math.max(...days.map((day) => day.total), 1);
   const productTotals = new Map();
@@ -3755,7 +3895,10 @@ function renderDashboard() {
     current.total += Number(item.qty || 0) * Number(item.price || 0);
     productTotals.set(item.productId, current);
   }));
-  const topProducts = [...productTotals.values()].sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name)).slice(0, 5);
+
+  const topProducts = [...productTotals.values()]
+    .sort((a, b) => b.qty - a.qty || a.name.localeCompare(b.name))
+    .slice(0, 5);
   const maxProductQty = topProducts.length > 0 ? Math.max(...topProducts.map((p) => p.qty), 1) : 1;
 
   const lowStockItems = products
@@ -3763,19 +3906,43 @@ function renderDashboard() {
     .sort((a, b) => Number(a.qty) - Number(b.qty) || a.name.localeCompare(b.name));
   const outOfStockCount = lowStockItems.filter((item) => Number(item.qty) <= 0).length;
   const lowStockCount = lowStockItems.filter((item) => Number(item.qty) > 0).length;
-  const attentionStock = lowStockItems.slice(0, 5);
-  const pendingTransfers = transfers
+  const totalStockWarnings = lowStockItems.length;
+  const stockWarningsTotalPages = Math.max(1, Math.ceil(totalStockWarnings / DASHBOARD_PAGE_SIZE));
+  dashboardStockWarningsCurrentPage = Math.max(1, Math.min(dashboardStockWarningsCurrentPage, stockWarningsTotalPages));
+  const stockWarningsStartIdx = (dashboardStockWarningsCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
+  const pagedStockWarnings = lowStockItems.slice(stockWarningsStartIdx, stockWarningsStartIdx + DASHBOARD_PAGE_SIZE);
+  const stockWarningsPaginationHtml = totalStockWarnings > DASHBOARD_PAGE_SIZE
+    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="stockWarnings">${renderPaginationControls_({ totalRecords: totalStockWarnings, totalPages: stockWarningsTotalPages, currentPage: dashboardStockWarningsCurrentPage, startIndex: stockWarningsStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'stock warnings')}</div>`
+    : '';
+
+  const allPendingTransfers = transfers
     .filter((item) => !['Received', 'Cancelled'].includes(item.status))
-    .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0))
-    .slice(0, 5);
-  const recentSales = [...completedSales]
-    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
+  const totalTransfers = allPendingTransfers.length;
+  const transfersTotalPages = Math.max(1, Math.ceil(totalTransfers / DASHBOARD_PAGE_SIZE));
+  dashboardTransfersCurrentPage = Math.max(1, Math.min(dashboardTransfersCurrentPage, transfersTotalPages));
+  const transfersStartIdx = (dashboardTransfersCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
+  const pagedPendingTransfers = allPendingTransfers.slice(transfersStartIdx, transfersStartIdx + DASHBOARD_PAGE_SIZE);
+  const transfersPaginationHtml = totalTransfers > DASHBOARD_PAGE_SIZE
+    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="transfers">${renderPaginationControls_({ totalRecords: totalTransfers, totalPages: transfersTotalPages, currentPage: dashboardTransfersCurrentPage, startIndex: transfersStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'pending transfers')}</div>`
+    : '';
+
+  const sortedSales = [...selectedSalesRecords]
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  const totalSalesCount = sortedSales.length;
+  const salesTotalPages = Math.max(1, Math.ceil(totalSalesCount / DASHBOARD_PAGE_SIZE));
+  dashboardSalesCurrentPage = Math.max(1, Math.min(dashboardSalesCurrentPage, salesTotalPages));
+  const salesStartIdx = (dashboardSalesCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
+  const pagedSales = sortedSales.slice(salesStartIdx, salesStartIdx + DASHBOARD_PAGE_SIZE);
+  const salesPaginationHtml = totalSalesCount > DASHBOARD_PAGE_SIZE
+    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="sales">${renderPaginationControls_({ totalRecords: totalSalesCount, totalPages: salesTotalPages, currentPage: dashboardSalesCurrentPage, startIndex: salesStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'completed sales')}</div>`
+    : '';
+
   const branchName = branches.find((branch) => branch.id === activeBranchId)?.name || 'Selected Branch';
   const permissions = currentSession?.account?.permissions || ['*'];
   const canAccess = (view) => permissions.includes('*') || permissions.includes(view);
 
-  const todayFormatted = today.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+  const selectedDateFormatted = selectedDate.toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
   const getCustomerInitials = (name) => {
     const clean = displayCustomerName(name).replace(/[^a-zA-Z0-9\s]/g, '').trim();
@@ -3793,15 +3960,19 @@ function renderDashboard() {
             <span class="pulse-dot"></span>
             <span>LIVE OPERATIONS</span>
           </span>
-          <span class="dashboard-date-chip">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-            <span>${escapeHtml(todayFormatted)}</span>
-          </span>
+          <span class="dashboard-date-chip">${escapeHtml(selectedDateFormatted)}</span>
         </div>
         <h2 class="dashboard-main-title">${escapeHtml(branchName)} Dashboard</h2>
         <p class="dashboard-main-sub">Real-time revenue metrics, product velocity, and operational stock alerts.</p>
       </div>
       <div class="dashboard-quick-actions">
+        <div class="dashboard-date-filter" id="dashboardDateFilterWrap">
+          <span class="dashboard-date-label">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="3"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+            <span>Dashboard date</span>
+          </span>
+          <input id="dashboardDateInput" type="date" value="${selectedDateKey}" max="${formatDateInput(new Date())}" aria-label="Dashboard date" />
+        </div>
         <button class="button button-secondary dashboard-action-btn dashboard-refresh-btn" type="button" data-dashboard-action="refresh" title="Refresh dashboard data" aria-label="Refresh dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
           <span>Refresh</span>
@@ -3815,14 +3986,14 @@ function renderDashboard() {
           <div class="kpi-icon-wrap icon-blue">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
           </div>
-          <span class="kpi-badge badge-blue">${todaySalesRecords.length} order${todaySalesRecords.length === 1 ? '' : 's'} today</span>
+          <span class="kpi-badge badge-blue">${selectedSalesRecords.length} order${selectedSalesRecords.length === 1 ? '' : 's'}</span>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Today's Gross Sales</span>
-          <strong class="kpi-value text-glow-blue">${money(todaySales)}</strong>
+          <span class="kpi-label">Gross Sales</span>
+          <strong class="kpi-value text-glow-blue">${money(selectedSales)}</strong>
         </div>
         <div class="kpi-foot">
-          <span class="kpi-foot-sub">Today's Discount: <b>${money(todayDiscount)}</b></span>
+          <span class="kpi-foot-sub">Discount: <b>${money(selectedDiscount)}</b></span>
           <span class="kpi-foot-link">Ledger &rarr;</span>
         </div>
       </article>
@@ -3836,10 +4007,10 @@ function renderDashboard() {
         </div>
         <div class="kpi-body">
           <span class="kpi-label">Cash Collected</span>
-          <strong class="kpi-value text-success">${money(todayCashCollected)}</strong>
+          <strong class="kpi-value text-success">${money(selectedCashCollected)}</strong>
         </div>
         <div class="kpi-foot">
-          <span class="kpi-foot-sub">Today's Credit: <b>${money(todayCreditSales)}</b></span>
+          <span class="kpi-foot-sub">Credit: <b>${money(selectedCreditSales)}</b></span>
           <span class="kpi-foot-link">Details &rarr;</span>
         </div>
       </article>
@@ -3890,8 +4061,8 @@ function renderDashboard() {
           <span class="kpi-badge badge-cyan">Liquid Cash</span>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Cash Collected + Today's Spot Cash - Expenses</span>
-          <strong class="kpi-value text-cyan">${money(todayCashOnHand)}</strong>
+          <span class="kpi-label">Cash Collected + Spot Cash - Expenses</span>
+          <strong class="kpi-value text-cyan">${money(selectedCashOnHand)}</strong>
         </div>
         <div class="kpi-foot">
           <span class="kpi-foot-sub">Cash collected + opening float - expenses</span>
@@ -3904,11 +4075,11 @@ function renderDashboard() {
           <div class="kpi-icon-wrap icon-rose">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v12"/></svg>
           </div>
-          <span class="kpi-badge badge-rose">${todayExpenseRecords.length} record${todayExpenseRecords.length === 1 ? '' : 's'}</span>
+          <span class="kpi-badge badge-rose">${selectedExpenseRecords.length} record${selectedExpenseRecords.length === 1 ? '' : 's'}</span>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Today's Expenses</span>
-          <strong class="kpi-value text-danger">${money(todayExpenses)}</strong>
+          <span class="kpi-label">Selected Date Expenses</span>
+          <strong class="kpi-value text-danger">${money(selectedExpenses)}</strong>
         </div>
         <div class="kpi-foot">
           <span class="kpi-foot-sub">Operational spend</span>
@@ -3924,8 +4095,8 @@ function renderDashboard() {
           <span class="kpi-badge badge-purple">Opening Float</span>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Today's Spot Cash</span>
-          <strong class="kpi-value text-purple">${money(todaySpotCash)}</strong>
+          <span class="kpi-label">Selected Date Spot Cash</span>
+          <strong class="kpi-value text-purple">${money(selectedSpotCash)}</strong>
         </div>
         <div class="kpi-foot">
           <span class="kpi-foot-sub">Opening cash before operations</span>
@@ -3941,8 +4112,8 @@ function renderDashboard() {
           <span class="kpi-badge badge-teal">20% Margin</span>
         </div>
         <div class="kpi-body">
-          <span class="kpi-label">Today's Income</span>
-          <strong class="kpi-value text-teal">${money(todayNetIncome)}</strong>
+          <span class="kpi-label">Selected Date Income</span>
+          <strong class="kpi-value text-teal">${money(selectedNetIncome)}</strong>
         </div>
         <div class="kpi-foot">
           <span class="kpi-foot-sub">Net sales &times; 20%</span>
@@ -3966,7 +4137,7 @@ function renderDashboard() {
         <div class="sales-chart-wrapper">
           <div class="sales-chart" role="img" aria-label="Daily sales trend for the past seven days">
             ${days.map((day) => {
-              const isToday = day.key === todayKey;
+              const isToday = day.key === selectedDateKey;
               const isPeak = day.total === maxDayTotal && day.total > 0;
               const hasSales = day.total > 0;
               const barHeightPct = hasSales ? Math.max(Math.round((day.total / maxDayTotal) * 92), 6) : 3;
@@ -3984,7 +4155,7 @@ function renderDashboard() {
                   </div>
                   <div class="sales-chart-col-foot">
                     <span class="sales-chart-label">${escapeHtml(day.label)}</span>
-                    ${isToday ? '<span class="today-marker-dot" title="Today"></span>' : ''}
+                    ${isToday ? '<span class="today-marker-dot" title="Selected date"></span>' : ''}
                   </div>
                 </div>
               `;
@@ -4044,7 +4215,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="inventory">Open inventory &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${attentionStock.length ? attentionStock.map((product) => `
+            ${pagedStockWarnings.length ? pagedStockWarnings.map((product) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon warning-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -4064,6 +4235,7 @@ function renderDashboard() {
               </div>
             `}
           </div>
+          ${stockWarningsPaginationHtml}
         </section>
       ` : ''}
 
@@ -4077,7 +4249,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="transfers">View transfers &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${pendingTransfers.length ? pendingTransfers.map((transfer) => `
+            ${pagedPendingTransfers.length ? pagedPendingTransfers.map((transfer) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon transfer-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
@@ -4097,6 +4269,7 @@ function renderDashboard() {
               </div>
             `}
           </div>
+          ${transfersPaginationHtml}
         </section>
       ` : ''}
 
@@ -4104,12 +4277,12 @@ function renderDashboard() {
         <div class="dashboard-panel-head">
           <div class="panel-head-titles">
             <span class="panel-eyebrow">LIVE ACTIVITY</span>
-            <h3>Latest Completed Sales</h3>
+            <h3>Completed Sales for Selected Date</h3>
           </div>
           <button class="dashboard-text-link" type="button" data-dashboard-view="sales">View all &rarr;</button>
         </div>
         <div class="dashboard-feed-list">
-          ${recentSales.length ? recentSales.map((sale) => {
+          ${pagedSales.length ? pagedSales.map((sale) => {
             const isCash = sale.paymentType === 'cash';
             const initials = getCustomerInitials(sale.customerName);
             const timeStr = sale.date ? new Date(sale.date).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
@@ -4129,13 +4302,45 @@ function renderDashboard() {
           }).join('') : `
             <div class="dashboard-empty-feed">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-              <p>No completed sales recorded for this branch yet.</p>
+              <p>No completed sales recorded for the selected date.</p>
             </div>
           `}
         </div>
+        ${salesPaginationHtml}
       </section>
     </div>
   `;
+
+  initCustomDatePickers(dashboard);
+  const dashboardDateInput = $('#dashboardDateInput');
+  if (dashboardDateInput) {
+    dashboardDateInput.addEventListener('change', () => {
+      dashboardDate = dashboardDateInput.value || formatDateInput(new Date());
+      dashboardSalesCurrentPage = 1;
+      dashboardStockWarningsCurrentPage = 1;
+      dashboardTransfersCurrentPage = 1;
+      renderDashboard();
+    });
+  }
+
+  dashboard.querySelectorAll('[data-dashboard-pagination]').forEach((container) => {
+    const feed = container.dataset.dashboardPagination;
+    container.querySelectorAll('.table-pagination [data-page]').forEach((button) => {
+      button.addEventListener('click', (e) => {
+        e.preventDefault();
+        const targetPage = Number(button.dataset.page);
+        if (!Number.isFinite(targetPage) || targetPage < 1) return;
+        if (feed === 'sales') dashboardSalesCurrentPage = targetPage;
+        else if (feed === 'stockWarnings') dashboardStockWarningsCurrentPage = targetPage;
+        else if (feed === 'transfers') dashboardTransfersCurrentPage = targetPage;
+        renderDashboard();
+        const panel = container.closest('.dashboard-panel');
+        if (panel) {
+          panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    });
+  });
 
   // Interactive bindings
   dashboard.querySelectorAll('[data-dashboard-view]').forEach((elem) => {
@@ -4242,6 +4447,121 @@ function renderDashboardSkeleton() {
   `;
 }
 
+function generatePaginationPages_(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1);
+  }
+  const pages = [];
+  if (currentPage <= 4) {
+    for (let i = 1; i <= 5; i++) pages.push(i);
+    pages.push('...');
+    pages.push(totalPages);
+  } else if (currentPage >= totalPages - 3) {
+    pages.push(1);
+    pages.push('...');
+    for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    pages.push('...');
+    pages.push(currentPage - 1);
+    pages.push(currentPage);
+    pages.push(currentPage + 1);
+    pages.push('...');
+    pages.push(totalPages);
+  }
+  return pages;
+}
+
+function paginateItems_(items, pageSize = TABLE_PAGE_SIZE) {
+  const term = ($('#searchInput')?.value || '').trim().toLowerCase();
+  if (term !== (viewLastSearchTerms[activeView] || '')) {
+    viewCurrentPages[activeView] = 1;
+    viewLastSearchTerms[activeView] = term;
+  }
+  const currentPage = viewCurrentPages[activeView] || 1;
+  const totalRecords = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+  const validPage = Math.max(1, Math.min(currentPage, totalPages));
+  viewCurrentPages[activeView] = validPage;
+
+  const startIndex = (validPage - 1) * pageSize;
+  const pagedItems = items.slice(startIndex, startIndex + pageSize);
+
+  return {
+    pagedItems,
+    currentPage: validPage,
+    totalPages,
+    totalRecords,
+    startIndex,
+    pageSize,
+  };
+}
+
+function renderPaginationControls_(paginationInfo, entityName = 'records') {
+  if (!paginationInfo) return '';
+  const currentPage = paginationInfo.currentPage || 1;
+  const totalPages = paginationInfo.totalPages || 1;
+  const totalRecords = paginationInfo.totalRecords ?? paginationInfo.total ?? 0;
+  const pageSize = paginationInfo.pageSize || TABLE_PAGE_SIZE;
+  const startIndex = paginationInfo.startIndex ?? paginationInfo.startIdx ?? ((currentPage - 1) * pageSize);
+  if (totalRecords === 0) return '';
+  const startRecord = startIndex + 1;
+  const endRecord = Math.min(startIndex + pageSize, totalRecords);
+  const pageList = generatePaginationPages_(currentPage, totalPages);
+
+  return `
+    <div class="table-pagination" role="navigation" aria-label="${escapeHtml(activeView)} pagination">
+      <div class="pagination-info">
+        Showing <strong>${startRecord}&ndash;${endRecord}</strong> of <strong>${totalRecords}</strong> ${escapeHtml(entityName)}
+      </div>
+      <div class="pagination-controls">
+        <button type="button" class="pagination-btn pagination-nav-btn" data-page="${currentPage - 1}" ${currentPage <= 1 ? 'disabled' : ''} aria-label="Previous page" title="Previous page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          <span>Prev</span>
+        </button>
+        <div class="pagination-pages">
+          ${pageList.map((p) => {
+            if (p === '...') {
+              return `<span class="pagination-ellipsis">&hellip;</span>`;
+            }
+            const isActive = p === currentPage;
+            return `
+              <button type="button" class="pagination-btn pagination-page-btn ${isActive ? 'is-active' : ''}" data-page="${p}" ${isActive ? 'aria-current="page"' : ''}>
+                ${p}
+              </button>
+            `;
+          }).join('')}
+        </div>
+        <button type="button" class="pagination-btn pagination-nav-btn" data-page="${currentPage + 1}" ${currentPage >= totalPages ? 'disabled' : ''} aria-label="Next page" title="Next page">
+          <span>Next</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function bindPaginationEvents_(container = $('#inventoryTable'), renderFn = null) {
+  if (!container) return;
+  container.querySelectorAll('.table-pagination [data-page]').forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetPage = Number(button.dataset.page);
+      if (!Number.isFinite(targetPage) || targetPage < 1) return;
+      viewCurrentPages[activeView] = targetPage;
+      if (typeof renderFn === 'function') {
+        renderFn();
+      } else {
+        renderInventory();
+      }
+      const scrollParent = container.closest('.table-container') || container;
+      if (scrollParent) {
+        scrollParent.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+      }
+    });
+  });
+}
+
 function renderInventory() {
   if (activeView === 'dashboard') { renderDashboard(); return; }
   if (activeView === 'bundleMonitoring') { renderBundleMonitoring(); return; }
@@ -4279,9 +4599,19 @@ function renderInventory() {
   if (activeView === 'staffAccounts') { renderStaffAccounts(); return; }
   if (activeView === 'adminAccount') { renderAdminAccount(); return; }
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
-  const rows = sortByName_(products.filter((product) => `${product.name} ${product.category} ${product.sku || ''}`.toLowerCase().includes(term)));
+  const allRows = sortByName_(products.filter((product) => `${product.name} ${product.category} ${product.sku || ''}`.toLowerCase().includes(term)));
   const table = $('#inventoryTable');
   if (!table) return;
+
+  const isPaginated = activeView === 'products' || activeView === 'inventory';
+  let rows = allRows;
+  let paginationHtml = '';
+
+  if (isPaginated) {
+    const pagination = paginateItems_(allRows);
+    rows = pagination.pagedItems;
+    paginationHtml = renderPaginationControls_(pagination, activeView === 'products' ? 'products' : 'inventory items');
+  }
 
   const headers = activeView === 'products'
     ? ['Product', 'Category', 'Selling price', 'Quantity in stock', 'Low stock', 'Status', 'Action']
@@ -4322,7 +4652,7 @@ function renderInventory() {
       : product.qty > 0
       ? `<span class="price-text">${money(displayedSellingPrice(product))}</span>`
       : '<span class="price-text price-unset">Stock In required</span>';
-    const tankInventory = product.tankInventory
+    const tankInventory = !['products', 'pos'].includes(activeView) && product.tankInventory
       ? `<span class="bundle-tank-inventory" aria-label="Tank inventory"><span class="bundle-tank-count">Filled <b>${product.tankInventory.filled}</b></span><span class="bundle-tank-count is-empty">Empty <b>${product.tankInventory.empty}</b></span></span>`
       : '';
     const priceCell = `<span class="product-price-stack">${priceValue}${tankInventory}</span>`;
@@ -4379,7 +4709,10 @@ function renderInventory() {
       ${headers.map((header) => `<span>${header}</span>`).join('')}
     </div>
     ${content || '<div class="empty-state"><p>No products found</p><small>Try adjusting your search query</small></div>'}
+    ${paginationHtml}
   `;
+
+  bindPaginationEvents_(table);
 
   table.querySelectorAll('[data-add]').forEach((button) => button.addEventListener('click', () => addToCart(button.dataset.add)));
   table.querySelectorAll('[data-row-add]').forEach((row) => {
@@ -4404,7 +4737,10 @@ function renderBundleMonitoring() {
   if (!table) return;
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
   const componentName = (component) => allProducts.find((product) => product.id === component.productId)?.name || component.productId;
-  const bundles = sortByName_(products.filter((product) => product.productType === 'bundle' && `${product.name} ${product.components?.map(componentName).join(' ') || ''} ${product.sku || ''}`.toLowerCase().includes(term)));
+  const allBundles = sortByName_(products.filter((product) => product.productType === 'bundle' && `${product.name} ${product.components?.map(componentName).join(' ') || ''} ${product.sku || ''}`.toLowerCase().includes(term)));
+  const pagination = paginateItems_(allBundles);
+  const bundles = pagination.pagedItems;
+  const paginationHtml = renderPaginationControls_(pagination, 'bundles');
   const tankIcon = (filled) => `<svg class="bundle-monitor-tank ${filled ? 'is-solid' : 'is-outline'}" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h10l2 4-2 14H7L5 7l2-4Z"/><path d="M5 7h14M9 3v4m6-4v4"/><path d="M9 12h6M9 16h6"/></svg>`;
   table.innerHTML = `
     ${bundles.map((bundle) => {
@@ -4487,7 +4823,9 @@ function renderBundleMonitoring() {
         </article>
       `;
     }).join('') || '<div class="empty-state"><p>No bundles found</p><small>Create a Bundle / Set in Product Registration to monitor it here.</small></div>'}
+    ${paginationHtml}
   `;
+  bindPaginationEvents_(table);
 }
 
 function renderQuarantinedItems() {
@@ -4503,6 +4841,9 @@ function renderQuarantinedItems() {
   const cases = inventoryQuarantineCases
     .filter((item) => pendingItemsByCase[item.id] && `${item.id} ${item.reference} ${item.sourceType} ${item.supplierReference} ${item.sourceBranchName} ${item.reason} ${item.status}`.toLowerCase().includes(term))
     .sort((left, right) => new Date(right.createdAt) - new Date(left.createdAt));
+  const pagination = paginateItems_(cases);
+  const pagedCases = pagination.pagedItems;
+  const paginationHtml = renderPaginationControls_(pagination, 'quarantine cases');
   const sourceLabel = (source) => source === 'stock_in' ? 'Stock-In Receipt' : 'Stock Transfer Receipt';
   const resolutionLabel = (resolution) => ({ restocked: 'Restock', supplier_return: 'Return to Supplier', return_to_source: 'Return to Source Branch', disposed: 'Dispose' }[resolution] || resolution);
   const actionButtons = (item, source) => {
@@ -4525,8 +4866,8 @@ function renderQuarantinedItems() {
     return `<span class="table-actions quarantine-actions">${buttons.map(([resolution, label]) => `<button class="quarantine-resolution resolve-btn ${btnClasses[resolution] || ''}" data-quarantine-resolution="${resolution}" data-quarantine-item="${item.id}" type="button" title="${label}">${icons[resolution] || ''}<span class="resolve-btn-text">${label}</span></button>`).join('')}</span>`;
   };
 
-  const casesHtml = cases.length > 0
-    ? cases.map((caseItem) => {
+  const casesHtml = pagedCases.length > 0
+    ? pagedCases.map((caseItem) => {
         const items = pendingItemsByCase[caseItem.id] || [];
         return `<section class="quarantine-case-card">
           <header class="quarantine-case-header">
@@ -4589,8 +4930,10 @@ function renderQuarantinedItems() {
         </div>
       </div>
       ${casesHtml}
+      ${paginationHtml}
     </div>
   `;
+  bindPaginationEvents_(table);
   table.querySelectorAll('[data-quarantine-item]').forEach((button) => button.addEventListener('click', () => resolveInventoryQuarantineItem_(button.dataset.quarantineItem, button.dataset.quarantineResolution)));
   table.querySelector('#quarantineReportNavBtn')?.addEventListener('click', () => setView('quarantineReport'));
 }
@@ -4851,6 +5194,15 @@ function renderQuarantineReport() {
     return;
   }
 
+  const allRecords = filteredGroups.flatMap((g) => g.items);
+  const pagination = paginateItems_(allRecords);
+  const pagedRecordIds = new Set(pagination.pagedItems.map((r) => r.item.id));
+  const pagedGroups = filteredGroups.map((g) => ({
+    ...g,
+    items: g.items.filter((r) => pagedRecordIds.has(r.item.id)),
+  })).filter((g) => g.items.length > 0);
+  const paginationHtml = renderPaginationControls_(pagination, 'quarantine records');
+
   table.innerHTML = `
     ${filterChipsHtml}
     <div class="table-row table-header">
@@ -4861,7 +5213,7 @@ function renderQuarantineReport() {
       <span>Quantity</span>
       <span>Disposition</span>
     </div>
-    ${filteredGroups.map((g) => `
+    ${pagedGroups.map((g) => `
       <div class="quarantine-group-divider ${g.key}">
         <div class="quarantine-group-divider-content">
           <span class="quarantine-group-icon ${g.key}">${g.icon}</span>
@@ -4901,9 +5253,11 @@ function renderQuarantineReport() {
         </div>
       `).join('')}
     `).join('')}
+    ${paginationHtml}
   `;
 
   bindQuarantineFilterChips_(table);
+  bindPaginationEvents_(table);
 }
 
 function bindQuarantineFilterChips_(table) {
@@ -5113,10 +5467,17 @@ function generateQuarantinePdf() {
   openReportInNewPage_(renderedQuarantineHtml, `Quarantine Report - ${branch.name || 'Main Branch'}`);
 }
 
+let stockInHistoryCurrentPage = 1;
+let stockInHistoryLastTerm = '';
+
 function renderStockInHistoryTable(filterTerm = '') {
   const list = $('#stockInHistoryList');
   if (!list) return;
   const term = String(filterTerm || '').trim().toLowerCase();
+  if (term !== stockInHistoryLastTerm) {
+    stockInHistoryCurrentPage = 1;
+    stockInHistoryLastTerm = term;
+  }
   const rows = stockInHistory.filter((item) => {
     if (!term) return true;
     const dateStr = item.date ? new Date(item.date).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }).toLowerCase() : '';
@@ -5139,6 +5500,22 @@ function renderStockInHistoryTable(filterTerm = '') {
     return;
   }
 
+  const total = rows.length;
+  const totalPages = Math.max(1, Math.ceil(total / TABLE_PAGE_SIZE));
+  const currentPage = Math.max(1, Math.min(stockInHistoryCurrentPage, totalPages));
+  stockInHistoryCurrentPage = currentPage;
+  const startIdx = (currentPage - 1) * TABLE_PAGE_SIZE;
+  const pagedRows = rows.slice(startIdx, startIdx + TABLE_PAGE_SIZE);
+  const paginationInfo = {
+    total,
+    totalPages,
+    currentPage,
+    startItem: startIdx + 1,
+    endItem: Math.min(startIdx + TABLE_PAGE_SIZE, total),
+    pagedItems: pagedRows,
+  };
+  const paginationHtml = renderPaginationControls_(paginationInfo, 'stock-in records');
+
   list.innerHTML = `
     <div class="stock-in-history-table">
       <div class="stock-in-history-row stock-in-history-header">
@@ -5148,7 +5525,7 @@ function renderStockInHistoryTable(filterTerm = '') {
         <span>Stock-In Price</span>
         <span>Supplier / Invoice #</span>
       </div>
-      ${rows.map((receipt) => {
+      ${pagedRows.map((receipt) => {
         const date = receipt.date ? new Date(receipt.date).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : 'Unknown date';
         const cost = receipt.sellingPrice === null ? '<span class="stock-in-cost-unknown">Not recorded</span>' : money(receipt.sellingPrice);
         const ref = receipt.supplierReference
@@ -5171,7 +5548,20 @@ function renderStockInHistoryTable(filterTerm = '') {
           <div class="stock-in-ref-cell">${ref}</div>
         </div>`;
       }).join('')}
+      ${paginationHtml}
     </div>`;
+
+  list.querySelectorAll('.table-pagination [data-page]').forEach((button) => {
+    button.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = Number(button.dataset.page);
+      if (Number.isFinite(page) && page >= 1) {
+        stockInHistoryCurrentPage = page;
+        renderStockInHistoryTable(term);
+        list.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    });
+  });
 }
 
 function showStockInHistory() {
@@ -5179,6 +5569,7 @@ function showStockInHistory() {
   if (!dialog) return;
   const branchName = branches.find((branch) => branch.id === activeBranchId)?.name || 'Selected Branch';
   $('#stockInHistorySubtitle').textContent = `Stock-in records and receipt pricing for ${branchName}.`;
+  stockInHistoryCurrentPage = 1;
   const searchInput = $('#stockInSearchInput');
   if (searchInput) searchInput.value = '';
   renderStockInHistoryTable('');
@@ -5190,11 +5581,12 @@ function renderBranches() {
   const table = $('#inventoryTable');
   if (!table) return;
   const rows = sortByName_(branches.filter((branch) => `${branch.name} ${branch.type} ${branch.address}`.toLowerCase().includes(term)));
+  const paginated = paginateItems_(rows);
   table.innerHTML = `
     <div class="table-row table-header">
       <span>Branch</span><span>Type</span><span>Address</span><span>Status</span><span>Action</span>
     </div>
-    ${rows.map((branch) => `
+    ${paginated.pagedItems.map((branch) => `
       <div class="table-row">
         <div class="product-cell"><strong class="product-name">${escapeHtml(branch.name)}</strong><span class="product-meta">${escapeHtml(branch.id)}${branch.id === activeBranchId ? ' &bull; Active location' : ''}</span></div>
         <div class="row-middle-cells">
@@ -5205,7 +5597,9 @@ function renderBranches() {
         <div class="row-action-cell"><button class="icon-button" data-edit-branch="${branch.id}" aria-label="Edit ${escapeHtml(branch.name)}" title="Edit branch"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></button></div>
       </div>
     `).join('') || '<div class="empty-state"><p>No branches found</p><small>Add a branch to begin branch-level operations.</small></div>'}
+    ${renderPaginationControls_(paginated, 'branches')}
   `;
+  bindPaginationEvents_(table, renderBranches);
   table.querySelectorAll('[data-edit-branch]').forEach((button) => button.addEventListener('click', () => openForm('editBranch', button.dataset.editBranch)));
 }
 
@@ -5214,6 +5608,7 @@ function renderCustomers() {
   const table = $('#inventoryTable');
   if (!table) return;
   const rows = sortByName_(customers.filter((customer) => `${customer.name} ${customer.phone} ${customer.address}`.toLowerCase().includes(term)));
+  const paginated = paginateItems_(rows);
   const paidByCredit = creditPayments.reduce((totals, payment) => {
     const creditId = payment.creditId || payment.saleId;
     totals[creditId] = (totals[creditId] || 0) + Number(payment.amount || 0);
@@ -5234,7 +5629,7 @@ function renderCustomers() {
   openingCreditAccounts.forEach((account) => addBalance(account));
   table.innerHTML = `
     <div class="table-row table-header"><span>Customer</span><span>Contact</span><span>Credit</span><span>Remaining Balance</span><span>Action</span></div>
-    ${rows.map((customer) => {
+    ${paginated.pagedItems.map((customer) => {
       const customerAccounts = balancesByCustomer[customer.id]?.accounts || [];
       const paymentAccount = customerAccounts.find((account) => !account.isPaid);
       const historyAccount = paymentAccount || customerAccounts[0];
@@ -5246,21 +5641,99 @@ function renderCustomers() {
       </div>
     `;
     }).join('') || '<div class="empty-state"><p>No customers found</p><small>Add a customer for this branch.</small></div>'}
+    ${renderPaginationControls_(paginated, 'customers')}
   `;
+  bindPaginationEvents_(table, renderCustomers);
   table.querySelectorAll('[data-edit-customer]').forEach((button) => button.addEventListener('click', () => openForm('editCustomer', button.dataset.editCustomer)));
   table.querySelectorAll('[data-credit-account]').forEach((button) => button.addEventListener('click', () => openCreditPayment(button.dataset.creditAccount)));
   table.querySelectorAll('[data-view-payment-history]').forEach((button) => button.addEventListener('click', () => openCreditHistory(button.dataset.viewPaymentHistory)));
 }
 
 function renderCreditPayments() {
+  ensureCreditsDateDefaults();
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
+  const dateFrom = $('#creditsDateFrom')?.value || '';
+  const dateTo = $('#creditsDateTo')?.value || '';
   const table = $('#inventoryTable');
   if (!table) return;
-  const accounts = salesHistory
-    .filter((sale) => String(sale.paymentType || '').toLowerCase() === 'credit')
-    .map((sale) => ({ saleId: sale.saleId, customerId: sale.customerId, customerName: sale.customerName, date: sale.date, total: Number(sale.total || 0), itemCount: (sale.items || []).reduce((count, item) => count + Number(item.qty || 0), 0) }))
-    .filter((sale) => `${sale.saleId} ${sale.customerName}`.toLowerCase().includes(term))
-    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const paidByCredit = creditPayments.reduce((totals, payment) => {
+    const key = payment.creditId || payment.saleId;
+    totals[key] = (totals[key] || 0) + Number(payment.amount || 0);
+    return totals;
+  }, {});
+
+  const creditSales = salesHistory
+    .filter((sale) => {
+      if (String(sale.paymentType || '').toLowerCase() !== 'credit') return false;
+      const sDate = saleDateKey(sale.date);
+      return (!dateFrom || (sDate && sDate >= dateFrom)) && (!dateTo || (sDate && sDate <= dateTo));
+    })
+    .map((sale) => {
+      const total = Number(sale.total || 0);
+      const paid = paidByCredit[sale.saleId] || 0;
+      const balance = Math.max(total - paid, 0);
+      const items = sale.items || [];
+      const itemCount = items.reduce((count, item) => count + Number(item.qty || 0), 0);
+      const itemsSummary = items.length === 0
+        ? 'No items recorded'
+        : items.map((i) => `${i.name || 'Item'} (${i.qty}×)`).join(', ');
+      const statusKey = balance <= 0.00001 ? 'settled' : paid > 0 ? 'partial' : 'unpaid';
+      return {
+        id: sale.saleId,
+        saleId: sale.saleId,
+        sourceType: 'sale',
+        sourceLabel: 'Credit Sale',
+        customerId: sale.customerId,
+        customerName: sale.customerName,
+        date: sale.date,
+        total,
+        paid,
+        balance,
+        itemCount,
+        items,
+        itemsSummary,
+        statusKey,
+      };
+    });
+
+  const openingAccounts = (openingCreditAccounts || [])
+    .filter((acc) => {
+      const aDate = saleDateKey(acc.date);
+      return (!dateFrom || (aDate && aDate >= dateFrom)) && (!dateTo || (aDate && aDate <= dateTo));
+    })
+    .map((acc) => {
+    const total = Number(acc.total || 0);
+    const paid = paidByCredit[acc.creditId] || 0;
+    const balance = Math.max(total - paid, 0);
+    const statusKey = balance <= 0.00001 ? 'settled' : paid > 0 ? 'partial' : 'unpaid';
+    return {
+      id: acc.creditId,
+      saleId: acc.creditId,
+      sourceType: 'opening',
+      sourceLabel: 'Previous Balance',
+      customerId: acc.customerId,
+      customerName: acc.customerName,
+      date: acc.date,
+      total,
+      paid,
+      balance,
+      itemCount: 0,
+      items: [],
+      itemsSummary: acc.reference || 'Previous Balance Account',
+      statusKey,
+    };
+  });
+
+  const allCreditAccounts = [...creditSales, ...openingAccounts].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  // Search filtering
+  const filteredAccounts = allCreditAccounts.filter((account) => {
+    const matchesTerm = `${account.saleId} ${account.customerName} ${account.customerId || ''} ${account.itemsSummary}`.toLowerCase().includes(term);
+    return matchesTerm;
+  });
+
+  const paginated = paginateItems_(filteredAccounts);
 
   table.innerHTML = `
     <div class="table-row table-header">
@@ -5269,34 +5742,109 @@ function renderCreditPayments() {
       <span>Credit Date</span>
       <span>Item Count</span>
       <span>Credit Amount</span>
+      <span>Action</span>
     </div>
+    ${paginated.pagedItems.map((account) => {
+      const dateObj = account.date ? new Date(account.date) : null;
+      const formattedDate = dateObj && !isNaN(dateObj.getTime())
+        ? dateObj.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+        : '—';
+      const formattedTime = dateObj && !isNaN(dateObj.getTime())
+        ? dateObj.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
+        : '';
 
-    ${accounts.map((account) => {
       return `
         <div class="table-row">
-          <div class="product-cell">
-            <strong class="product-name">${escapeHtml(displayCustomerName(account.customerName))}</strong>
-            <span class="product-meta">${escapeHtml(account.customerId)}</span>
+          <div class="product-cell customer-details-cell">
+            <div class="customer-name-line">
+              <strong class="product-name">${escapeHtml(displayCustomerName(account.customerName))}</strong>
+            </div>
+            <span class="product-meta">${escapeHtml(account.customerId || 'No ID')}</span>
           </div>
           <div class="row-middle-cells">
-            <strong class="product-name">${escapeHtml(account.saleId)}</strong>
-            <span>${escapeHtml(account.date ? new Date(account.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '')}</span>
-            <span>${account.itemCount.toLocaleString('en-PH')}</span>
-            <strong class="price-text">${money(account.total)}</strong>
+            <div class="product-cell credit-sale-cell">
+              <div class="credit-sale-ref-row">
+                <svg class="credit-sale-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <strong class="product-name credit-sale-ref">${escapeHtml(account.saleId)}</strong>
+              </div>
+              <span class="product-meta credit-items-summary" title="${escapeHtml(account.itemsSummary)}">${escapeHtml(account.itemsSummary)}</span>
+            </div>
+            <div class="product-cell credit-date-cell">
+              <span class="credit-date-text">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                <strong>${escapeHtml(formattedDate)}</strong>
+              </span>
+              ${formattedTime ? `<span class="product-meta credit-time-meta">${escapeHtml(formattedTime)}</span>` : ''}
+            </div>
+            <div class="credit-items-cell">
+              <span class="stock-pill stock-quantity credit-qty-pill">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <span>${account.itemCount.toLocaleString('en-PH')} unit${account.itemCount === 1 ? '' : 's'}</span>
+              </span>
+            </div>
+            <div class="credit-amount-cell">
+              <strong class="price-text credit-total-price">${money(account.total)}</strong>
+            </div>
+          </div>
+          <div class="row-action-cell">
+            ${account.sourceType === 'sale'
+              ? `<span class="table-actions"><button class="icon-button primary-icon" data-view-credit-sale="${escapeHtml(account.saleId)}" aria-label="View credit sale ${escapeHtml(account.saleId)}" title="View credit sale details"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button></span>`
+              : `<span class="table-actions"><button class="icon-button primary-icon" data-view-credit-history="${escapeHtml(account.customerId || account.id)}" aria-label="View credit ledger" title="View credit account history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button></span>`}
           </div>
         </div>
       `;
-    }).join('') || '<div class="empty-state"><p>No credit sales found</p><small>Credit sales for the selected branch will appear here.</small></div>'}
+    }).join('') || `
+      <div class="empty-state">
+        <p>${term ? 'No matching credit records' : 'No credit sales found'}</p>
+        <small>${term ? 'Try adjusting your search query above.' : 'Credit sales for the selected branch will appear here.'}</small>
+        ${term ? `<button type="button" class="button button-secondary credit-reset-filters-btn" id="creditResetFiltersBtn" style="margin-top:12px;font-size:12px;padding:6px 14px;">Reset Search</button>` : ''}
+      </div>
+    `}
+    ${renderPaginationControls_(paginated, 'credit records')}
   `;
+
+  bindPaginationEvents_(table, renderCreditPayments);
+
+  // Bind reset button
+  const resetBtn = $('#creditResetFiltersBtn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      const searchInput = $('#searchInput');
+      if (searchInput) searchInput.value = '';
+      renderCreditPayments();
+    });
+  }
+
+  table.querySelectorAll('[data-view-credit-sale]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const sale = salesHistory.find((item) => item.saleId === button.dataset.viewCreditSale);
+      if (sale) showSaleReceipt({ sale, items: sale.items || [], customerName: sale.customerName, context: 'credit' });
+    });
+  });
+
+  table.querySelectorAll('[data-view-credit-history]').forEach((button) => {
+    button.addEventListener('click', () => {
+      openCreditHistory(button.dataset.viewCreditHistory);
+    });
+  });
 }
 
 function renderDailySpotCash() {
+  ensureDailySpotCashDateDefaults();
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
+  const dateFrom = $('#dailySpotCashDateFrom')?.value || '';
+  const dateTo = $('#dailySpotCashDateTo')?.value || '';
   const table = $('#inventoryTable');
   if (!table) return;
   const filtered = dailySpotCash
-    .filter((item) => `${item.businessDate} ${item.openingCash} ${item.notes || ''}`.toLowerCase().includes(term))
+    .filter((item) => {
+      const matchesTerm = `${item.businessDate} ${item.openingCash} ${item.notes || ''}`.toLowerCase().includes(term);
+      const itemDate = saleDateKey(item.businessDate || item.createdAt);
+      const matchesDate = (!dateFrom || (itemDate && itemDate >= dateFrom)) && (!dateTo || (itemDate && itemDate <= dateTo));
+      return matchesTerm && matchesDate;
+    })
     .sort((a, b) => new Date(b.businessDate) - new Date(a.businessDate));
+  const paginated = paginateItems_(filtered);
 
   table.innerHTML = `
     <div class="table-row table-header">
@@ -5306,7 +5854,7 @@ function renderDailySpotCash() {
       <span>Last Updated</span>
       <span>Action</span>
     </div>
-    ${filtered.map((item) => {
+    ${paginated.pagedItems.map((item) => {
       const dateObj = item.businessDate ? new Date(`${item.businessDate}T00:00:00`) : null;
       const formattedDate = dateObj && !isNaN(dateObj.getTime())
         ? dateObj.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
@@ -5338,7 +5886,10 @@ function renderDailySpotCash() {
         </div>
       `;
     }).join('') || '<div class="empty-state"><p>No Daily Spot Cash recorded</p><small>Record the opening cash before branch operations begin.</small></div>'}
+    ${renderPaginationControls_(paginated, 'spot cash records')}
   `;
+
+  bindPaginationEvents_(table, renderDailySpotCash);
 
   table.querySelectorAll('[data-edit-spot-cash]').forEach((button) => {
     button.addEventListener('click', () => openForm('editDailySpotCash', button.dataset.editSpotCash));
@@ -5349,12 +5900,21 @@ function renderDailySpotCash() {
 }
 
 function renderDailyExpenses() {
+  ensureDailyExpensesDateDefaults();
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
+  const dateFrom = $('#dailyExpensesDateFrom')?.value || '';
+  const dateTo = $('#dailyExpensesDateTo')?.value || '';
   const table = $('#inventoryTable');
   if (!table) return;
   const filtered = dailyExpenses
-    .filter((item) => `${item.businessDate} ${item.category} ${item.description || ''} ${item.receiptReference || ''} ${item.amount}`.toLowerCase().includes(term))
+    .filter((item) => {
+      const matchesTerm = `${item.businessDate} ${item.category} ${item.description || ''} ${item.receiptReference || ''} ${item.amount}`.toLowerCase().includes(term);
+      const itemDate = saleDateKey(item.businessDate || item.createdAt);
+      const matchesDate = (!dateFrom || (itemDate && itemDate >= dateFrom)) && (!dateTo || (itemDate && itemDate <= dateTo));
+      return matchesTerm && matchesDate;
+    })
     .sort((a, b) => new Date(b.businessDate) - new Date(a.businessDate));
+  const paginated = paginateItems_(filtered);
 
   table.innerHTML = `
     <div class="table-row table-header">
@@ -5364,7 +5924,7 @@ function renderDailyExpenses() {
       <span>Description & Receipt</span>
       <span>Action</span>
     </div>
-    ${filtered.map((item) => {
+    ${paginated.pagedItems.map((item) => {
       const dateObj = item.businessDate ? new Date(`${item.businessDate}T00:00:00`) : null;
       const formattedDate = dateObj && !isNaN(dateObj.getTime())
         ? dateObj.toLocaleDateString('en-PH', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
@@ -5396,7 +5956,10 @@ function renderDailyExpenses() {
         </div>
       `;
     }).join('') || '<div class="empty-state"><p>No Daily Expenses recorded</p><small>Track cash expenses for this branch.</small></div>'}
+    ${renderPaginationControls_(paginated, 'expenses')}
   `;
+
+  bindPaginationEvents_(table, renderDailyExpenses);
 
   table.querySelectorAll('[data-edit-expense]').forEach((button) => {
     button.addEventListener('click', () => openForm('editDailyExpense', button.dataset.editExpense));
@@ -5469,9 +6032,11 @@ function renderSalesHistory() {
     const saleDate = saleDateKey(sale.date);
     return matchesTerm && (!dateFrom || saleDate >= dateFrom) && (!dateTo || saleDate <= dateTo);
   });
+  const paginated = paginateItems_(sales);
+
   table.innerHTML = `
     <div class="table-row table-header"><span>Receipt</span><span>Date and Time</span><span>Customer</span><span>Payment</span><span>Total</span><span>Action</span></div>
-    ${sales.map((sale) => {
+    ${paginated.pagedItems.map((sale) => {
       const items = sale.items || [];
       const itemsSummary = items.length === 0
         ? 'No items recorded'
@@ -5509,10 +6074,14 @@ function renderSalesHistory() {
         </div>
       `;
     }).join('') || '<div class="empty-state"><p>No sales found</p><small>Completed sales for the selected branch will appear here.</small></div>'}
+    ${renderPaginationControls_(paginated, 'sales')}
   `;
+
+  bindPaginationEvents_(table, renderSalesHistory);
+
   table.querySelectorAll('[data-view-sale]').forEach((button) => button.addEventListener('click', () => {
     const sale = salesHistory.find((item) => item.saleId === button.dataset.viewSale);
-    if (sale) showSaleReceipt({ sale, items: sale.items, customerName: sale.customerName });
+    if (sale) showSaleReceipt({ sale, items: sale.items, customerName: sale.customerName, context: 'history' });
   }));
   table.querySelectorAll('[data-manage-sale-return]').forEach((button) => button.addEventListener('click', () => {
     const sale = salesHistory.find((item) => item.saleId === button.dataset.manageSaleReturn);
@@ -5778,7 +6347,17 @@ async function releaseSaleReplacement_(sale, returnId, modal = 'return') {
   try { await api('releaseSaleReplacement', { returnId }); await refresh(false); modal === 'history' ? openSaleReturnHistoryDialog(sale) : openSaleReturnDialog(sale); showToast('Replacement released.', 'success'); } catch (error) { $(`#saleReturn${modal === 'history' ? 'History' : ''}Error`).textContent = error.message; }
 }
 
-function openCreditHistory(historyId) {
+let creditHistoryCurrentPage = 1;
+let creditHistoryCurrentHistoryId = null;
+
+function openCreditHistory(historyId, pageNumber) {
+  if (historyId !== creditHistoryCurrentHistoryId) {
+    creditHistoryCurrentPage = 1;
+    creditHistoryCurrentHistoryId = historyId;
+  }
+  if (typeof pageNumber === 'number' && Number.isFinite(pageNumber)) {
+    creditHistoryCurrentPage = pageNumber;
+  }
   const customer = customers.find((item) => item.id === historyId);
   const isCustomerHistory = Boolean(customer);
   const account = creditAccounts.find((item) => item.creditId === historyId);
@@ -5838,6 +6417,22 @@ function openCreditHistory(historyId) {
         </div>
       `;
     } else {
+      const totalCount = payments.length;
+      const totalPages = Math.max(1, Math.ceil(totalCount / TABLE_PAGE_SIZE));
+      const currentPage = Math.max(1, Math.min(creditHistoryCurrentPage, totalPages));
+      creditHistoryCurrentPage = currentPage;
+      const startIdx = (currentPage - 1) * TABLE_PAGE_SIZE;
+      const pagedPayments = payments.slice(startIdx, startIdx + TABLE_PAGE_SIZE);
+      const paginationInfo = {
+        totalRecords: totalCount,
+        totalPages,
+        currentPage,
+        startIndex: startIdx,
+        pageSize: TABLE_PAGE_SIZE,
+        pagedItems: pagedPayments,
+      };
+      const paginationHtml = totalCount > TABLE_PAGE_SIZE ? renderPaginationControls_(paginationInfo, 'payment records') : '';
+
       listEl.innerHTML = `
         <div class="credit-modal-payments-table">
           <div class="credit-modal-payments-head">
@@ -5846,7 +6441,7 @@ function openCreditHistory(historyId) {
             <span>Reference / Notes</span>
             <span style="text-align:right;">Action</span>
           </div>
-          ${payments.map((p) => `
+          ${pagedPayments.map((p) => `
             <div class="credit-modal-payments-row">
               <div class="credit-modal-date-col">
                 <strong class="credit-date-text">${escapeHtml(p.date ? new Date(p.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '')}</strong>
@@ -5864,7 +6459,18 @@ function openCreditHistory(historyId) {
             </div>
           `).join('')}
         </div>
+        ${paginationHtml}
       `;
+
+      listEl.querySelectorAll('.table-pagination [data-page]').forEach((button) => {
+        button.addEventListener('click', (e) => {
+          e.preventDefault();
+          const target = Number(button.dataset.page);
+          if (Number.isFinite(target) && target >= 1) {
+            openCreditHistory(historyId, target);
+          }
+        });
+      });
     }
   }
 
@@ -5880,7 +6486,7 @@ function openCreditHistory(historyId) {
   listEl.querySelectorAll('[data-modal-delete-payment]').forEach((btn) => {
     btn.addEventListener('click', async () => {
       await deleteCreditPayment(btn.dataset.modalDeletePayment);
-      openCreditHistory(historyId);
+      openCreditHistory(historyId, creditHistoryCurrentPage);
     });
   });
 
@@ -5931,7 +6537,10 @@ async function deleteCreditPayment(paymentId) {
 }
 
 function renderTransfers() {
+  ensureTransfersDateDefaults();
   const term = ($('#searchInput')?.value || '').trim().toLowerCase();
+  const dateFrom = $('#transfersDateFrom')?.value || '';
+  const dateTo = $('#transfersDateTo')?.value || '';
   const table = $('#inventoryTable');
   if (!table) return;
   const grouped = new Map();
@@ -5941,7 +6550,14 @@ function renderTransfers() {
     group.members.push(transfer);
     grouped.set(key, group);
   });
-  const rows = [...grouped.values()].filter((transfer) => `${transfer.id} ${transfer.sourceBranchName} ${transfer.destinationBranchName} ${transfer.members.map((item) => item.productName).join(' ')} ${transfer.status}`.toLowerCase().includes(term));
+  const rows = [...grouped.values()].filter((transfer) => {
+    const matchesTerm = `${transfer.id} ${transfer.sourceBranchName} ${transfer.destinationBranchName} ${transfer.members.map((item) => item.productName).join(' ')} ${transfer.status}`.toLowerCase().includes(term);
+    const rawDate = transfer.createdAt || transfer.date || transfer.members?.[0]?.createdAt || transfer.members?.[0]?.date || '';
+    const tDate = saleDateKey(rawDate);
+    const matchesDate = (!dateFrom || (tDate && tDate >= dateFrom)) && (!dateTo || (tDate && tDate <= dateTo));
+    return matchesTerm && matchesDate;
+  });
+  const paginated = paginateItems_(rows);
   const action = (transfer) => {
     if (transfer.status === 'Draft' && transfer.sourceBranchId === activeBranchId) {
       return `
@@ -5969,7 +6585,7 @@ function renderTransfers() {
       <span>Status</span>
       <span>Action</span>
     </div>
-    ${rows.map((transfer) => `
+    ${paginated.pagedItems.map((transfer) => `
       <div class="table-row">
         <div class="product-cell">
           <strong class="product-name">${escapeHtml(transfer.id)}</strong>
@@ -5988,7 +6604,9 @@ function renderTransfers() {
         </div>
       </div>
     `).join('') || '<div class="empty-state"><p>No stock transfers found</p><small>Create a transfer from the selected branch.</small></div>'}
+    ${renderPaginationControls_(paginated, 'transfers')}
   `;
+  bindPaginationEvents_(table, renderTransfers);
   table.querySelectorAll('[data-transfer-action]').forEach((button) => button.addEventListener('click', () => handleTransferAction(button)));
 }
 
@@ -7500,6 +8118,13 @@ function setView(view, preserveSidebarOpen = false) {
   if (view !== 'dashboard' && !permissions.includes('*') && !permissions.includes(requiredPermission)) view = permissions[0] || 'pos';
   if (!validViews.includes(view)) view = 'pos';
   activeView = view;
+  if (view !== 'pos') {
+    productsCurrentPage = 1;
+    viewCurrentPages[view] = 1;
+    dashboardSalesCurrentPage = 1;
+    dashboardStockWarningsCurrentPage = 1;
+    dashboardTransfersCurrentPage = 1;
+  }
   localStorage.setItem(ACTIVE_VIEW_KEY, activeView);
   const details = {
     dashboard: ['WORKSPACE', 'Dashboard', 'BRANCH OVERVIEW', 'Operational Snapshot'],
@@ -7627,6 +8252,14 @@ function setView(view, preserveSidebarOpen = false) {
   if (salesDateRange) salesDateRange.hidden = view !== 'sales';
   const quarantineDateRange = $('#quarantineDateRange');
   if (quarantineDateRange) quarantineDateRange.hidden = view !== 'quarantineReport';
+  const transfersDateRange = $('#transfersDateRange');
+  if (transfersDateRange) transfersDateRange.hidden = view !== 'transfers';
+  const dailySpotCashDateRange = $('#dailySpotCashDateRange');
+  if (dailySpotCashDateRange) dailySpotCashDateRange.hidden = view !== 'dailySpotCash';
+  const dailyExpensesDateRange = $('#dailyExpensesDateRange');
+  if (dailyExpensesDateRange) dailyExpensesDateRange.hidden = view !== 'dailyExpenses';
+  const creditsDateRange = $('#creditsDateRange');
+  if (creditsDateRange) creditsDateRange.hidden = view !== 'credits';
   const profilePanel = $('#accountProfilePanel');
   if (profilePanel && view !== 'adminAccount') profilePanel.hidden = true;
   if (view === 'sales') {
@@ -7636,6 +8269,18 @@ function setView(view, preserveSidebarOpen = false) {
   if (view === 'quarantineReport') {
     ensureQuarantineDateDefaults();
     updateQuarantinePrintPeriod();
+  }
+  if (view === 'transfers') {
+    ensureTransfersDateDefaults();
+  }
+  if (view === 'dailySpotCash') {
+    ensureDailySpotCashDateDefaults();
+  }
+  if (view === 'dailyExpenses') {
+    ensureDailyExpensesDateDefaults();
+  }
+  if (view === 'credits') {
+    ensureCreditsDateDefaults();
   }
   if (view !== 'sales' && view !== 'quarantineReport') {
     const period = $('#salesPrintPeriod');
@@ -8300,6 +8945,126 @@ if (quarantineDateTo) {
   });
 }
 
+const transfersDateFrom = $('#transfersDateFrom');
+if (transfersDateFrom) {
+  transfersDateFrom.addEventListener('change', () => {
+    const dateFrom = $('#transfersDateFrom');
+    const dateTo = $('#transfersDateTo');
+    if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+      dateTo.value = dateFrom.value;
+      syncCustomDatePicker(dateTo);
+    }
+    syncCustomDatePicker(dateFrom);
+    viewCurrentPages['transfers'] = 1;
+    renderInventory();
+  });
+}
+
+const transfersDateTo = $('#transfersDateTo');
+if (transfersDateTo) {
+  transfersDateTo.addEventListener('change', () => {
+    const dateFrom = $('#transfersDateFrom');
+    const dateTo = $('#transfersDateTo');
+    if (dateFrom.value && dateTo.value && dateTo.value < dateFrom.value) {
+      dateFrom.value = dateTo.value;
+      syncCustomDatePicker(dateFrom);
+    }
+    syncCustomDatePicker(dateTo);
+    viewCurrentPages['transfers'] = 1;
+    renderInventory();
+  });
+}
+
+const dailySpotCashDateFrom = $('#dailySpotCashDateFrom');
+if (dailySpotCashDateFrom) {
+  dailySpotCashDateFrom.addEventListener('change', () => {
+    const dateFrom = $('#dailySpotCashDateFrom');
+    const dateTo = $('#dailySpotCashDateTo');
+    if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+      dateTo.value = dateFrom.value;
+      syncCustomDatePicker(dateTo);
+    }
+    syncCustomDatePicker(dateFrom);
+    viewCurrentPages['dailySpotCash'] = 1;
+    renderInventory();
+  });
+}
+
+const dailySpotCashDateTo = $('#dailySpotCashDateTo');
+if (dailySpotCashDateTo) {
+  dailySpotCashDateTo.addEventListener('change', () => {
+    const dateFrom = $('#dailySpotCashDateFrom');
+    const dateTo = $('#dailySpotCashDateTo');
+    if (dateFrom.value && dateTo.value && dateTo.value < dateFrom.value) {
+      dateFrom.value = dateTo.value;
+      syncCustomDatePicker(dateFrom);
+    }
+    syncCustomDatePicker(dateTo);
+    viewCurrentPages['dailySpotCash'] = 1;
+    renderInventory();
+  });
+}
+
+const dailyExpensesDateFrom = $('#dailyExpensesDateFrom');
+if (dailyExpensesDateFrom) {
+  dailyExpensesDateFrom.addEventListener('change', () => {
+    const dateFrom = $('#dailyExpensesDateFrom');
+    const dateTo = $('#dailyExpensesDateTo');
+    if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+      dateTo.value = dateFrom.value;
+      syncCustomDatePicker(dateTo);
+    }
+    syncCustomDatePicker(dateFrom);
+    viewCurrentPages['dailyExpenses'] = 1;
+    renderInventory();
+  });
+}
+
+const dailyExpensesDateTo = $('#dailyExpensesDateTo');
+if (dailyExpensesDateTo) {
+  dailyExpensesDateTo.addEventListener('change', () => {
+    const dateFrom = $('#dailyExpensesDateFrom');
+    const dateTo = $('#dailyExpensesDateTo');
+    if (dateFrom.value && dateTo.value && dateTo.value < dateFrom.value) {
+      dateFrom.value = dateTo.value;
+      syncCustomDatePicker(dateFrom);
+    }
+    syncCustomDatePicker(dateTo);
+    viewCurrentPages['dailyExpenses'] = 1;
+    renderInventory();
+  });
+}
+
+const creditsDateFrom = $('#creditsDateFrom');
+if (creditsDateFrom) {
+  creditsDateFrom.addEventListener('change', () => {
+    const dateFrom = $('#creditsDateFrom');
+    const dateTo = $('#creditsDateTo');
+    if (dateFrom.value && dateTo.value && dateFrom.value > dateTo.value) {
+      dateTo.value = dateFrom.value;
+      syncCustomDatePicker(dateTo);
+    }
+    syncCustomDatePicker(dateFrom);
+    viewCurrentPages['credits'] = 1;
+    renderInventory();
+  });
+}
+
+const creditsDateTo = $('#creditsDateTo');
+if (creditsDateTo) {
+  creditsDateTo.addEventListener('change', () => {
+    const dateFrom = $('#creditsDateFrom');
+    const dateTo = $('#creditsDateTo');
+    if (dateFrom.value && dateTo.value && dateTo.value < dateFrom.value) {
+      dateFrom.value = dateTo.value;
+      syncCustomDatePicker(dateFrom);
+    }
+    syncCustomDatePicker(dateTo);
+    viewCurrentPages['credits'] = 1;
+    renderInventory();
+  });
+}
+
 const generateQuarantinePdfButton = $('#generateQuarantinePdfButton');
 if (generateQuarantinePdfButton) {
   generateQuarantinePdfButton.addEventListener('click', generateQuarantinePdf);
@@ -8483,19 +9248,65 @@ function openSaleCheckout() {
   initCustomDropdowns($('#saleDialog'));
 }
 
-function showSaleReceipt({ sale, items, customerName }) {
-  const branch = branches.find((item) => item.id === activeBranchId);
+function showSaleReceipt({ sale, items, customerName, context }) {
+  const branch = branches.find((item) => item.id === (sale.branchId || activeBranchId));
   const isCash = sale.paymentType === 'cash';
+  const isCreditView = context === 'credit' || activeView === 'credits' || (!isCash && context === 'history');
+  const isPos = context === 'pos';
+
   $('#receiptBranch').textContent = branch?.name || 'Main Branch';
   $('#receiptSaleId').textContent = sale.saleId || 'N/A';
   $('#receiptDate').textContent = new Date(sale.date || Date.now()).toLocaleString('en-PH');
   $('#receiptCustomer').textContent = displayCustomerName(customerName || 'Walk-in customer');
   $('#receiptPayment').textContent = isCash ? 'Cash Payment' : 'Credit Account';
 
+  // Modal Title and Eyebrow
+  const eyebrowEl = $('#receiptModalEyebrow');
+  const titleEl = $('#receiptModalTitle');
+  if (eyebrowEl) {
+    eyebrowEl.textContent = isCreditView ? 'CREDIT SALE RECORD' : (isPos ? 'SALE RECEIPT' : 'SALE RECEIPT');
+  }
+  if (titleEl) {
+    titleEl.textContent = isCreditView ? 'Credit Sale Details' : (isPos ? 'Purchase completed' : 'Sale Receipt Details');
+  }
+
+  // Primary Button text & icon
+  const primaryBtnText = $('#receiptPrimaryBtnText');
+  const primaryBtnIcon = $('#receiptPrimaryBtnIcon');
+  if (primaryBtnText) {
+    primaryBtnText.textContent = isPos ? 'New sale' : 'Close';
+  }
+  if (primaryBtnIcon) {
+    primaryBtnIcon.innerHTML = isPos
+      ? '<path d="M12 5v14M5 12h14"/>'
+      : '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>';
+  }
+
+  // Calculate credit details
+  const salePayments = isCash
+    ? []
+    : creditPayments.filter((p) => (p.creditId || p.saleId) === sale.saleId);
+  const paidAmount = salePayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const totalAmount = Number(sale.total || 0);
+  const remainingBalance = Math.max(totalAmount - paidAmount, 0);
+  const isSettled = !isCash && remainingBalance <= 0.00001;
+  const isPartial = !isCash && !isSettled && paidAmount > 0;
+
   const statusBadge = $('#receiptStatusBadge');
   if (statusBadge) {
-    statusBadge.textContent = isCash ? 'PAID CASH' : 'CREDIT CHARGED';
-    statusBadge.className = `receipt-status-badge ${isCash ? 'is-cash' : 'is-credit'}`;
+    if (isCash) {
+      statusBadge.textContent = 'PAID CASH';
+      statusBadge.className = 'receipt-status-badge is-cash';
+    } else if (isSettled) {
+      statusBadge.textContent = 'SETTLED IN FULL';
+      statusBadge.className = 'receipt-status-badge is-settled';
+    } else if (isPartial) {
+      statusBadge.textContent = `PARTIAL (${money(remainingBalance)} DUE)`;
+      statusBadge.className = 'receipt-status-badge is-partial';
+    } else {
+      statusBadge.textContent = 'CREDIT CHARGED';
+      statusBadge.className = 'receipt-status-badge is-credit';
+    }
   }
 
   const totalTitle = $('#receiptTotalTitle');
@@ -8504,7 +9315,7 @@ function showSaleReceipt({ sale, items, customerName }) {
     totalTitle.textContent = isCash ? 'Total Paid' : 'Total Charged';
   }
   if (totalSub) {
-    totalSub.textContent = isCash ? 'Settled in full' : 'Charged to customer ledger';
+    totalSub.textContent = isCash ? 'Settled in full' : (isSettled ? 'Settled in full' : 'Charged to customer ledger');
   }
 
   $('#receiptItems').innerHTML = items.map((item) => `
@@ -8529,10 +9340,54 @@ function showSaleReceipt({ sale, items, customerName }) {
   if (cashBreakdown) {
     cashBreakdown.hidden = !isCash;
   }
-  $('#receiptTenderedRow').hidden = !isCash;
-  $('#receiptChangeRow').hidden = !isCash;
+  const tenderedRow = $('#receiptTenderedRow');
+  const changeRow = $('#receiptChangeRow');
+  if (tenderedRow) tenderedRow.hidden = !isCash;
+  if (changeRow) changeRow.hidden = !isCash;
   $('#receiptTendered').textContent = money(sale.cashTendered || 0);
   $('#receiptChange').textContent = money(sale.change || 0);
+
+  // Credit breakdown card
+  const creditBreakdown = $('#receiptCreditBreakdown');
+  if (creditBreakdown) {
+    creditBreakdown.hidden = isCash;
+    if (!isCash) {
+      $('#receiptCreditTotal').textContent = money(totalAmount);
+      $('#receiptCreditPaid').textContent = money(paidAmount);
+      $('#receiptCreditBalance').textContent = money(remainingBalance);
+      const balanceRow = $('#receiptCreditBalanceRow');
+      const balanceLabel = $('#receiptCreditBalanceLabel');
+      if (balanceRow) {
+        balanceRow.className = `receipt-credit-row is-balance ${isSettled ? 'is-cleared' : ''}`;
+      }
+      if (balanceLabel) {
+        balanceLabel.textContent = isSettled ? 'Settled In Full' : (isPartial ? 'Remaining Balance' : 'Outstanding Balance');
+      }
+
+      const paymentsList = $('#receiptCreditPaymentsList');
+      if (paymentsList) {
+        if (salePayments.length > 0) {
+          paymentsList.hidden = false;
+          paymentsList.innerHTML = `
+            <div style="font-size:10px;font-weight:800;letter-spacing:0.6px;color:var(--text-muted);text-transform:uppercase;margin-bottom:2px;">Payments Recorded (${salePayments.length})</div>
+            ${salePayments.map((p) => `
+              <div class="receipt-credit-payment-entry">
+                <span class="receipt-credit-payment-entry-meta">
+                  <span>${p.date ? new Date(p.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Payment'}</span>
+                  ${p.id ? `<span style="opacity:0.7;">• ${escapeHtml(p.id)}</span>` : ''}
+                </span>
+                <strong class="receipt-credit-payment-entry-amt">+ ${money(p.amount)}</strong>
+              </div>
+            `).join('')}
+          `;
+        } else {
+          paymentsList.hidden = true;
+          paymentsList.innerHTML = '';
+        }
+      }
+    }
+  }
+
   $('#receiptDialog').showModal();
   requestAnimationFrame(updateReceiptScrollFade);
 }
@@ -8673,7 +9528,7 @@ $('#saleForm').addEventListener('submit', async (event) => {
     }
     renderInventory();
     renderCart();
-    showSaleReceipt({ sale, items: receiptItems, customerName });
+    showSaleReceipt({ sale, items: receiptItems, customerName, context: 'pos' });
     showToast(`Sale #${sale.saleId || 'Completed'} recorded: ${money(sale.total)}`, 'success');
     backgroundRefresh();
   } catch (error) {
@@ -8787,7 +9642,7 @@ async function initAuth() {
       let session;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          session = await api('restoreSession');
+          session = await withTimeout_(api('restoreSession'), 10000, 'Session restoration timed out. Please sign in again.');
           break;
         } catch (error) {
           restoreError = error;

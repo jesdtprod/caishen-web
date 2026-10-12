@@ -1438,7 +1438,13 @@ body::after {
   gap: 20px;
   box-shadow: 0 10px 30px -8px rgba(2, 6, 14, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   position: relative;
-  overflow: hidden;
+  overflow: visible;
+  z-index: 30;
+}
+
+.dashboard-header-banner:has(.custom-datepicker.open),
+.dashboard-header-banner.has-open-datepicker {
+  z-index: 200;
 }
 
 .dashboard-header-banner::before {
@@ -1450,6 +1456,7 @@ body::after {
   height: 260px;
   background: radial-gradient(circle, rgba(0, 102, 245, 0.15) 0%, transparent 70%);
   pointer-events: none;
+  border-radius: 14px;
 }
 
 .dashboard-title-area {
@@ -1527,7 +1534,86 @@ body::after {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  z-index: 1;
+  position: relative;
+  z-index: 35;
+  overflow: visible;
+}
+
+.dashboard-date-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 9px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  position: relative;
+  box-sizing: border-box;
+  transition: all var(--transition-fast);
+}
+
+.dashboard-date-filter:hover {
+  border-color: rgba(0, 102, 245, 0.4);
+  background: rgba(14, 25, 48, 0.95);
+}
+
+.dashboard-date-filter:has(.custom-datepicker.open),
+.dashboard-date-filter.has-open-datepicker {
+  border-color: var(--pepsi-blue);
+  box-shadow: 0 0 0 3px rgba(0, 102, 245, 0.2);
+  z-index: 250;
+}
+
+.dashboard-date-filter .dashboard-date-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.dashboard-date-filter .dashboard-date-label svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--pepsi-blue-light, #0076ff);
+}
+
+.dashboard-date-filter .custom-datepicker {
+  min-width: 138px;
+  position: relative;
+}
+
+.dashboard-date-filter .datepicker-trigger {
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--text-pure);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+
+.dashboard-date-filter .custom-calendar-popover {
+  right: 0 !important;
+  left: auto !important;
+  transform-origin: top right !important;
+  z-index: 1000 !important;
 }
 
 .dashboard-action-btn {
@@ -2769,19 +2855,17 @@ body::after {
   .dashboard-quick-actions {
     width: 100%;
     display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .dashboard-quick-actions::-webkit-scrollbar {
-    display: none;
+    gap: 10px;
+    flex-wrap: wrap;
+    overflow: visible;
   }
   .dashboard-action-btn {
     flex: 0 0 auto;
     white-space: nowrap;
     height: 38px;
+  }
+  .dashboard-date-filter {
+    flex: 0 0 auto;
   }
 }
 
@@ -2821,6 +2905,10 @@ body::after {
     padding: 0 8px;
     font-size: 11.5px;
     height: 38px;
+  }
+  .dashboard-date-filter {
+    grid-column: span 2;
+    justify-content: space-between;
   }
   .dashboard-refresh-btn {
     grid-column: span 2;
@@ -3420,6 +3508,11 @@ body::after {
   text-align: center;
 }
 
+.workspace[data-view="bundleMonitoring"] .table-pagination {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
 .bundle-monitor-card {
   display: flex;
   flex-direction: column;
@@ -3981,11 +4074,29 @@ body::after {
 }
 
 .workspace[data-view="credits"] .table-row {
-  grid-template-columns: minmax(180px, 1.5fr) minmax(130px, 1.1fr) minmax(120px, 1fr) 80px minmax(130px, 1fr);
+  grid-template-columns: minmax(200px, 1.6fr) minmax(180px, 1.4fr) minmax(140px, 1.1fr) 110px minmax(140px, 1.2fr) 76px;
+}
+
+.workspace[data-view="credits"] .table-header span:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 
 .workspace[data-view="credits"] .row-action-cell {
-  display: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.workspace[data-view="credits"] .row-action-cell .table-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .workspace[data-view="sales"] .table-row {
@@ -4077,23 +4188,42 @@ body::after {
 }
 
 .workspace[data-view="sales"] .toolbar,
-.workspace[data-view="quarantineReport"] .toolbar {
+.workspace[data-view="quarantineReport"] .toolbar,
+.workspace[data-view="transfers"] .toolbar,
+.workspace[data-view="dailySpotCash"] .toolbar,
+.workspace[data-view="dailyExpenses"] .toolbar,
+.workspace[data-view="credits"] .toolbar {
   display: flex;
   align-items: end;
   gap: 10px;
 }
 
 .workspace[data-view="sales"] .search-wrap,
-.workspace[data-view="quarantineReport"] .search-wrap {
+.workspace[data-view="quarantineReport"] .search-wrap,
+.workspace[data-view="transfers"] .search-wrap,
+.workspace[data-view="dailySpotCash"] .search-wrap,
+.workspace[data-view="dailyExpenses"] .search-wrap,
+.workspace[data-view="credits"] .search-wrap {
   flex: 1 1 auto;
   min-width: 0;
 }
 
 .workspace[data-view="sales"] .sales-date-range,
-.workspace[data-view="quarantineReport"] .sales-date-range {
+.workspace[data-view="quarantineReport"] .sales-date-range,
+.workspace[data-view="transfers"] .sales-date-range,
+.workspace[data-view="dailySpotCash"] .sales-date-range,
+.workspace[data-view="dailyExpenses"] .sales-date-range,
+.workspace[data-view="credits"] .sales-date-range {
   width: auto;
   margin-top: 0;
   flex: 0 0 auto;
+}
+
+#transfersDateRange,
+#dailySpotCashDateRange,
+#dailyExpensesDateRange,
+#creditsDateRange {
+  grid-template-columns: 164px 164px;
 }
 
 .sales-date-control {
@@ -4146,20 +4276,32 @@ body::after {
 @media (max-width: 960px) {
   .workspace[data-view="sales"] .toolbar,
   .workspace[data-view="quarantineReport"] .toolbar,
-  .workspace[data-view="inventoryReports"] .toolbar {
+  .workspace[data-view="inventoryReports"] .toolbar,
+  .workspace[data-view="transfers"] .toolbar,
+  .workspace[data-view="dailySpotCash"] .toolbar,
+  .workspace[data-view="dailyExpenses"] .toolbar,
+  .workspace[data-view="credits"] .toolbar {
     flex-wrap: wrap;
     gap: 8px;
   }
 
   .workspace[data-view="sales"] .search-wrap,
   .workspace[data-view="quarantineReport"] .search-wrap,
-  .workspace[data-view="inventoryReports"] .search-wrap {
+  .workspace[data-view="inventoryReports"] .search-wrap,
+  .workspace[data-view="transfers"] .search-wrap,
+  .workspace[data-view="dailySpotCash"] .search-wrap,
+  .workspace[data-view="dailyExpenses"] .search-wrap,
+  .workspace[data-view="credits"] .search-wrap {
     min-width: 200px;
     flex: 1 1 auto;
   }
 
   .workspace[data-view="sales"] .sales-date-range,
-  .workspace[data-view="quarantineReport"] .sales-date-range {
+  .workspace[data-view="quarantineReport"] .sales-date-range,
+  .workspace[data-view="transfers"] .sales-date-range,
+  .workspace[data-view="dailySpotCash"] .sales-date-range,
+  .workspace[data-view="dailyExpenses"] .sales-date-range,
+  .workspace[data-view="credits"] .sales-date-range {
     flex-wrap: wrap;
     flex: 1 1 auto;
   }
@@ -4169,6 +4311,10 @@ body::after {
   .workspace[data-view="sales"] .toolbar,
   .workspace[data-view="quarantineReport"] .toolbar,
   .workspace[data-view="inventoryReports"] .toolbar,
+  .workspace[data-view="transfers"] .toolbar,
+  .workspace[data-view="dailySpotCash"] .toolbar,
+  .workspace[data-view="dailyExpenses"] .toolbar,
+  .workspace[data-view="credits"] .toolbar,
   .toolbar {
     display: flex;
     flex-direction: column;
@@ -4183,6 +4329,10 @@ body::after {
   .workspace[data-view="sales"] .search-wrap,
   .workspace[data-view="quarantineReport"] .search-wrap,
   .workspace[data-view="inventoryReports"] .search-wrap,
+  .workspace[data-view="transfers"] .search-wrap,
+  .workspace[data-view="dailySpotCash"] .search-wrap,
+  .workspace[data-view="dailyExpenses"] .search-wrap,
+  .workspace[data-view="credits"] .search-wrap,
   .search-wrap {
     flex: 0 0 auto !important;
     width: 100% !important;
@@ -4214,7 +4364,11 @@ body::after {
   }
 
   .workspace[data-view="sales"] .sales-date-range,
-  .workspace[data-view="quarantineReport"] .sales-date-range {
+  .workspace[data-view="quarantineReport"] .sales-date-range,
+  .workspace[data-view="transfers"] .sales-date-range,
+  .workspace[data-view="dailySpotCash"] .sales-date-range,
+  .workspace[data-view="dailyExpenses"] .sales-date-range,
+  .workspace[data-view="credits"] .sales-date-range {
     width: 100%;
     max-width: 100%;
     margin-top: 0 !important;
@@ -5073,7 +5227,14 @@ dialog.credit-history-dialog {
 }
 
 .workspace[data-view="credits"] .skeleton-row {
-  grid-template-columns: minmax(180px, 1.5fr) minmax(130px, 1.1fr) minmax(120px, 1fr) 80px minmax(130px, 1fr);
+  grid-template-columns: minmax(200px, 1.6fr) minmax(180px, 1.4fr) minmax(140px, 1.1fr) 110px minmax(140px, 1.2fr) 76px;
+}
+
+.workspace[data-view="credits"] .skeleton-action-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
 .workspace[data-view="sales"] .skeleton-row {
@@ -8081,6 +8242,20 @@ dialog.receipt-dialog {
   box-shadow: 0 0 10px rgba(0, 102, 245, 0.3);
 }
 
+.receipt-status-badge.is-settled {
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+}
+
+.receipt-status-badge.is-partial {
+  background: rgba(245, 158, 11, 0.18);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.28);
+}
+
 /* Digital Receipt Slip Card */
 .receipt-slip-card {
   border-radius: 14px;
@@ -8344,6 +8519,135 @@ dialog.receipt-dialog {
   letter-spacing: -0.4px;
   font-feature-settings: "tnum";
   text-shadow: 0 2px 12px rgba(0, 102, 245, 0.5);
+}
+
+/* Credit Ledger Breakdown */
+.receipt-credit-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.1);
+  margin-top: 4px;
+}
+
+.receipt-credit-breakdown[hidden] {
+  display: none !important;
+}
+
+.receipt-credit-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.receipt-credit-row .receipt-credit-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.receipt-credit-row .receipt-credit-label svg {
+  width: 14px;
+  height: 14px;
+  color: #38bdf8;
+}
+
+.receipt-credit-row .receipt-credit-val {
+  font-feature-settings: "tnum";
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.receipt-credit-row.is-paid {
+  color: #10b981;
+}
+
+.receipt-credit-row.is-paid .receipt-credit-label {
+  color: #10b981;
+}
+
+.receipt-credit-row.is-paid .receipt-credit-label svg {
+  color: #10b981;
+}
+
+.receipt-credit-row.is-paid .receipt-credit-val {
+  color: #10b981;
+}
+
+.receipt-credit-row.is-balance {
+  padding: 8px 12px;
+  border-radius: 9px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  margin-top: 2px;
+}
+
+.receipt-credit-row.is-balance .receipt-credit-label {
+  color: inherit;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.receipt-credit-row.is-balance .receipt-credit-label svg {
+  color: inherit;
+}
+
+.receipt-credit-row.is-balance .receipt-credit-val {
+  color: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.receipt-credit-row.is-balance.is-cleared {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.receipt-credit-payments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 9px 12px;
+  background: rgba(7, 16, 34, 0.55);
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.receipt-credit-payments-list[hidden] {
+  display: none !important;
+}
+
+.receipt-credit-payment-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.receipt-credit-payment-entry-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.receipt-credit-payment-entry-amt {
+  font-weight: 700;
+  color: #10b981;
+  font-feature-settings: "tnum";
 }
 
 /* Cash Tendered & Change Breakdown */
@@ -9087,6 +9391,465 @@ dialog.receipt-dialog {
 .chip-dot.dot-supplier { background: #0284c7; box-shadow: 0 0 6px rgba(2, 132, 199, 0.6); }
 .chip-dot.dot-disposed { background: #e11d48; box-shadow: 0 0 6px rgba(225, 29, 72, 0.6); }
 .chip-dot.dot-pending { background: #d97706; box-shadow: 0 0 6px rgba(217, 119, 6, 0.6); }
+
+/* ==========================================================================
+   CUSTOMER CREDIT HISTORY REDESIGN
+   ========================================================================== */
+.credit-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(8, 16, 32, 0.65);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.credit-kpi-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(15, 28, 50, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 0;
+}
+
+.credit-kpi-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 102, 245, 0.12);
+}
+
+.credit-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.credit-kpi-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.credit-kpi-icon.blue {
+  background: rgba(0, 102, 245, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+}
+
+.credit-kpi-icon.amber {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.credit-kpi-icon.emerald {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.credit-kpi-icon.cyan {
+  background: rgba(6, 182, 212, 0.15);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+
+.credit-kpi-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.credit-kpi-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.credit-kpi-value {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  font-feature-settings: 'tnum';
+  line-height: 1.2;
+}
+
+.credit-kpi-value.amber-text {
+  color: #fbbf24;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.2);
+}
+
+.credit-kpi-value.emerald-text {
+  color: #34d399;
+  text-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+}
+
+.credit-kpi-sub {
+  font-size: 11px;
+  color: var(--text-tertiary, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.credit-kpi-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.credit-kpi-pct-badge {
+  font-size: 11px;
+  font-weight: 800;
+  color: #22d3ee;
+  background: rgba(6, 182, 212, 0.15);
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.credit-progress-bar-track {
+  width: 100%;
+  height: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 3px 0 2px 0;
+}
+
+.credit-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #0066f5, #22d3ee);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+/* Filter bar */
+.credit-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: rgba(10, 20, 36, 0.6);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.credit-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.credit-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 31px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, #94a3b8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  outline: none;
+  user-select: none;
+}
+
+.credit-filter-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.credit-filter-chip.active {
+  background: var(--color-primary, #0066f5);
+  color: #ffffff;
+  border-color: var(--color-primary, #0066f5);
+  box-shadow: 0 2px 8px rgba(0, 102, 245, 0.35);
+}
+
+.credit-chip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.credit-chip-dot.dot-unpaid { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.6); }
+.credit-chip-dot.dot-partial { background: #0284c7; box-shadow: 0 0 6px rgba(2, 132, 199, 0.6); }
+.credit-chip-dot.dot-settled { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+
+.credit-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  color: inherit;
+  line-height: 1;
+}
+
+.credit-filter-chip.active .credit-filter-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.credit-items-summary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.credit-time-meta {
+  display: block;
+  font-size: 11px;
+}
+
+.credit-items-cell {
+  display: flex;
+  align-items: center;
+}
+
+.credit-qty-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  width: fit-content;
+  white-space: nowrap;
+}
+
+.credit-qty-pill svg {
+  width: 12px;
+  height: 12px;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+
+/* Sale & Items Cell */
+.credit-sale-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.credit-sale-ref-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.credit-sale-icon {
+  width: 13px;
+  height: 13px;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.credit-sale-ref {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.credit-items-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary, #94a3b8);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 1px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.credit-items-badge svg {
+  width: 12px;
+  height: 12px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* Date Cell */
+.credit-date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.credit-date-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #cbd5e1;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.credit-date-text svg {
+  width: 13px;
+  height: 13px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.credit-time-text {
+  font-size: 11px;
+  color: var(--text-tertiary, #64748b);
+  padding-left: 18px;
+}
+
+/* Status Cell */
+.credit-status-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.credit-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.credit-status-pill svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.credit-status-pill.settled {
+  background: rgba(16, 185, 129, 0.14);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.credit-status-pill.partial {
+  background: rgba(2, 132, 199, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+.credit-status-pill.unpaid {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.credit-partial-status-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 90px;
+}
+
+.credit-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.8);
+  flex-shrink: 0;
+}
+
+.credit-row-progress {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.credit-row-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  border-radius: 999px;
+}
+
+/* Amount & Balance Cell */
+.credit-amount-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.credit-total-price {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #ffffff;
+  font-feature-settings: 'tnum';
+}
+
+.credit-balance-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 5px;
+  width: fit-content;
+  font-feature-settings: 'tnum';
+}
+
+.credit-balance-tag.is-due {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.credit-balance-tag.is-settled {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+/* Hover effect on credit rows */
+.workspace[data-view="credits"] .table-row:not(.table-header):hover {
+  background-color: rgba(0, 102, 245, 0.08) !important;
+}
 
 .quarantine-group-divider {
   display: flex;
@@ -12352,6 +13115,7 @@ dialog.confirm-dialog {
   }
 
   .workspace[data-view="sales"] .table-container,
+  .workspace[data-view="credits"] .table-container,
   .workspace[data-view="inventoryReports"] .table-container,
   .workspace[data-view="quarantineReport"] .table-container {
     width: 100%;
@@ -12361,6 +13125,13 @@ dialog.confirm-dialog {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
+  }
+
+  .workspace[data-view="credits"] .table-row,
+  .workspace[data-view="credits"] .skeleton-row {
+    grid-template-columns: minmax(180px, 1.5fr) minmax(150px, 1.2fr) minmax(120px, 1fr) 100px minmax(130px, 1.1fr) 76px;
+    gap: 10px;
+    padding: 0 14px;
   }
 
   .workspace[data-view="sales"] .table-row,
@@ -12696,12 +13467,20 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
     min-width: 0;
   }
 
-  .workspace[data-view="sales"] .toolbar {
+  .workspace[data-view="sales"] .toolbar,
+  .workspace[data-view="transfers"] .toolbar,
+  .workspace[data-view="dailySpotCash"] .toolbar,
+  .workspace[data-view="dailyExpenses"] .toolbar,
+  .workspace[data-view="credits"] .toolbar {
     flex-wrap: wrap;
     gap: 10px;
   }
 
-  .workspace[data-view="sales"] .sales-date-range {
+  .workspace[data-view="sales"] .sales-date-range,
+  .workspace[data-view="transfers"] .sales-date-range,
+  .workspace[data-view="dailySpotCash"] .sales-date-range,
+  .workspace[data-view="dailyExpenses"] .sales-date-range,
+  .workspace[data-view="credits"] .sales-date-range {
     max-width: 100%;
   }
 
@@ -13064,21 +13843,54 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
   .workspace[data-view="customers"] .table-row .row-middle-cells { grid-area: details; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 10px; align-items: center; }
   .workspace[data-view="customers"] .table-row .row-action-cell { grid-area: action; display: flex; align-items: center; }
 
+  /* Credit History Mobile Card Layout */
   .workspace[data-view="credits"] .table-row:not(.table-header) {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
     grid-template-areas:
-      "prod action"
-      "details action";
-    gap: 7px 12px;
-    padding: 12px 14px;
-    min-height: auto;
+      "cust amount"
+      "sale date"
+      "items action" !important;
+    row-gap: 8px !important;
+    column-gap: 12px !important;
+    align-items: center !important;
+    padding: 13px 14px !important;
+    min-height: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    background: rgba(13, 27, 50, 0.65) !important;
+    border-radius: 12px !important;
+    border: 1px solid rgba(56, 189, 248, 0.18) !important;
+    margin-bottom: 8px !important;
   }
 
-  .workspace[data-view="credits"] .table-row .product-cell { grid-area: prod; }
-  .workspace[data-view="credits"] .table-row .row-middle-cells { grid-area: details; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
-  .workspace[data-view="credits"] .table-row .row-action-cell { grid-area: action; display: flex; align-items: center; }
+  .workspace[data-view="credits"] .table-row .customer-details-cell { grid-area: cust; }
+  .workspace[data-view="credits"] .table-row .credit-amount-cell { grid-area: amount; justify-self: end; text-align: right; }
+  .workspace[data-view="credits"] .table-row .credit-sale-cell { grid-area: sale; }
+  .workspace[data-view="credits"] .table-row .credit-date-cell { grid-area: date; justify-self: end; text-align: right; }
+  .workspace[data-view="credits"] .table-row .credit-items-cell { grid-area: items; }
+  .workspace[data-view="credits"] .table-row .row-action-cell { grid-area: action; display: flex !important; justify-self: end; }
   .workspace[data-view="credits"] .credit-payment-button { min-width: 0; }
+  .workspace[data-view="credits"] .credit-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+  }
+  .workspace[data-view="credits"] .credit-kpi-card {
+    padding: 10px 12px !important;
+    gap: 10px !important;
+  }
+  .workspace[data-view="credits"] .credit-kpi-icon {
+    width: 32px !important;
+    height: 32px !important;
+  }
+  .workspace[data-view="credits"] .credit-kpi-value {
+    font-size: 15px !important;
+  }
+  .workspace[data-view="credits"] .credit-filter-bar {
+    padding: 8px 12px !important;
+  }
 
   /* Sales History Mobile Card Layout - Structured Multi-Row Grid */
   .workspace[data-view="sales"] .table-row:not(.table-header) {
@@ -14519,5 +15331,162 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
     min-height: 0 !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
+  }
+  .table-pagination {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   PRODUCTS TABLE PAGINATION
+   ========================================================================== */
+.table-pagination {
+  position: sticky;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: rgba(11, 20, 38, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: 12px;
+  z-index: 2;
+}
+
+.dashboard-panel .table-pagination {
+  position: static;
+  margin-top: 16px;
+  padding: 10px 14px;
+  background: rgba(8, 16, 34, 0.65);
+  border: 1px solid var(--border-card);
+  border-radius: 10px;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.pagination-info strong {
+  color: var(--text-pure);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-pages {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-subtle);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.pagination-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.5;
+  flex-shrink: 0;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  color: var(--text-pure);
+  background: rgba(0, 102, 245, 0.15);
+  border-color: rgba(0, 102, 245, 0.4);
+  transform: translateY(-1px);
+}
+
+.pagination-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination-page-btn {
+  padding: 0 8px;
+  min-width: 32px;
+}
+
+.pagination-page-btn.is-active {
+  color: #ffffff;
+  background: var(--pepsi-blue-gradient);
+  border-color: var(--pepsi-blue);
+  box-shadow: 0 2px 8px var(--pepsi-blue-glow);
+  font-weight: 700;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 32px;
+  color: var(--text-muted);
+  font-size: 14px;
+  font-weight: 700;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .table-pagination {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .pagination-info {
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .pagination-controls {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pagination-btn {
+    height: 30px;
+    min-width: 30px;
+    padding: 0 8px;
+    font-size: 12px;
   }
 }

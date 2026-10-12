@@ -256,6 +256,38 @@
                   <span>Generate PDF</span>
                 </button>
               </div>
+              <div class="sales-date-range" id="transfersDateRange" hidden>
+                <div class="sales-date-control">
+                  <input id="transfersDateFrom" type="date" aria-label="Date From" />
+                </div>
+                <div class="sales-date-control">
+                  <input id="transfersDateTo" type="date" aria-label="Date To" />
+                </div>
+              </div>
+              <div class="sales-date-range" id="dailySpotCashDateRange" hidden>
+                <div class="sales-date-control">
+                  <input id="dailySpotCashDateFrom" type="date" aria-label="Date From" />
+                </div>
+                <div class="sales-date-control">
+                  <input id="dailySpotCashDateTo" type="date" aria-label="Date To" />
+                </div>
+              </div>
+              <div class="sales-date-range" id="dailyExpensesDateRange" hidden>
+                <div class="sales-date-control">
+                  <input id="dailyExpensesDateFrom" type="date" aria-label="Date From" />
+                </div>
+                <div class="sales-date-control">
+                  <input id="dailyExpensesDateTo" type="date" aria-label="Date To" />
+                </div>
+              </div>
+              <div class="sales-date-range" id="creditsDateRange" hidden>
+                <div class="sales-date-control">
+                  <input id="creditsDateFrom" type="date" aria-label="Date From" />
+                </div>
+                <div class="sales-date-control">
+                  <input id="creditsDateTo" type="date" aria-label="Date To" />
+                </div>
+              </div>
               <button class="button button-primary" id="generateInventoryPdfButton" hidden>
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l3 3v17H6z"/><path d="M14 2v4h4"/><path d="M8 15h8M8 18h6M8 12h3"/></svg>
                 <span>Generate PDF</span>
@@ -776,10 +808,10 @@
             </div>
             <div class="modal-title-content">
               <div class="receipt-head-top">
-                <span class="modal-eyebrow">SALE RECEIPT</span>
+                <span class="modal-eyebrow" id="receiptModalEyebrow">SALE RECEIPT</span>
                 <span class="receipt-status-badge is-cash" id="receiptStatusBadge">PAID CASH</span>
               </div>
-              <h2>Purchase completed</h2>
+              <h2 id="receiptModalTitle">Purchase completed</h2>
               <p class="modal-subtitle" id="receiptBranch">Main Branch</p>
             </div>
           </div>
@@ -866,6 +898,32 @@
                 <strong class="receipt-highlight-amount" id="receiptTotal">PHP 0.00</strong>
               </div>
 
+              <!-- Credit Ledger Breakdown (Credit sales only) -->
+              <div class="receipt-credit-breakdown" id="receiptCreditBreakdown" hidden>
+                <div class="receipt-credit-row">
+                  <span class="receipt-credit-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <span>Total Credit Charged</span>
+                  </span>
+                  <strong class="receipt-credit-val" id="receiptCreditTotal">PHP 0.00</strong>
+                </div>
+                <div class="receipt-credit-row is-paid">
+                  <span class="receipt-credit-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Amount Paid to Date</span>
+                  </span>
+                  <strong class="receipt-credit-val" id="receiptCreditPaid">PHP 0.00</strong>
+                </div>
+                <div class="receipt-credit-row is-balance" id="receiptCreditBalanceRow">
+                  <span class="receipt-credit-label">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <span id="receiptCreditBalanceLabel">Remaining Balance</span>
+                  </span>
+                  <strong class="receipt-credit-val" id="receiptCreditBalance">PHP 0.00</strong>
+                </div>
+                <div class="receipt-credit-payments-list" id="receiptCreditPaymentsList" hidden></div>
+              </div>
+
               <!-- Cash Tendered & Change Breakdown (Cash sales only) -->
               <div class="receipt-cash-breakdown" id="receiptCashBreakdown">
                 <div class="receipt-tendered-row" id="receiptTenderedRow">
@@ -889,9 +947,9 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>
             <span>Print receipt</span>
           </button>
-          <button class="button modal-save-btn receipt-new-btn" type="button" data-close="receiptDialog">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
-            <span>New sale</span>
+          <button class="button modal-save-btn receipt-new-btn" type="button" data-close="receiptDialog" id="receiptPrimaryBtn">
+            <svg id="receiptPrimaryBtnIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+            <span id="receiptPrimaryBtnText">New sale</span>
           </button>
         </div>
       </div>
