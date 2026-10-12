@@ -1,17 +1,17 @@
 # Graph Report - caishen-web  (2026-10-12)
 
 ## Corpus Check
-- 64 files · ~103,244 words
+- 64 files · ~102,960 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 12 file(s) not represented in the graph (top: (none) 3, .css 3, .graphify-bak 1)
 
 ## Summary
-- 308 nodes · 735 edges · 27 communities (20 shown, 7 thin omitted)
+- 308 nodes · 734 edges · 27 communities (20 shown, 7 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 23 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6106cfc1`
+- Built from commit: `44619af2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -50,10 +50,10 @@
 4. `api()` - 26 edges
 5. `money()` - 25 edges
 6. `refresh()` - 21 edges
-7. `renderPaginationControls_()` - 20 edges
+7. `renderPaginationControls_()` - 19 edges
 8. `askConfirmation()` - 16 edges
-9. `renderDashboard()` - 16 edges
-10. `renderCart()` - 16 edges
+9. `renderCart()` - 16 edges
+10. `renderDashboard()` - 15 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Task 2: Branch-scoped Daily Spot Cash UI` --references--> `askConfirmation()`  [INFERRED]

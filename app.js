@@ -3829,6 +3829,7 @@ async function toggleAdminStatus(adminId) {
 }
 
 let dashboardLastActiveDate = null;
+const DASHBOARD_FEED_LIMIT = 5;
 
 function renderDashboard() {
   const dashboard = $('#dashboard');
@@ -4181,7 +4182,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="inventory">Open inventory &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${lowStockItems.length ? lowStockItems.map((product) => `
+            ${lowStockItems.length ? lowStockItems.slice(0, DASHBOARD_FEED_LIMIT).map((product) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon warning-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -4214,7 +4215,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="transfers">View transfers &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${allPendingTransfers.length ? allPendingTransfers.map((transfer) => `
+            ${allPendingTransfers.length ? allPendingTransfers.slice(0, DASHBOARD_FEED_LIMIT).map((transfer) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon transfer-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
@@ -4246,7 +4247,7 @@ function renderDashboard() {
           <button class="dashboard-text-link" type="button" data-dashboard-view="sales">View all &rarr;</button>
         </div>
         <div class="dashboard-feed-list">
-          ${sortedSales.length ? sortedSales.map((sale) => {
+          ${sortedSales.length ? sortedSales.slice(0, DASHBOARD_FEED_LIMIT).map((sale) => {
             const isCash = sale.paymentType === 'cash';
             const initials = getCustomerInitials(sale.customerName);
             const timeStr = sale.date ? new Date(sale.date).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
