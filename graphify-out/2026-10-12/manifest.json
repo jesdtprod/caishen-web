@@ -18,9 +18,9 @@
     "semantic_hash": "85060dd50c382cc8aa0c77b96f7f5760"
   },
   "app.js": {
-    "mtime": 1791265795.3048687,
-    "seen": 1791265806.3034217,
-    "ast_hash": "ec6aac5a6bc72385bddd8bcd0c220b95",
+    "mtime": 1791785339.0850568,
+    "seen": 1791785354.19349,
+    "ast_hash": "57791893ebf2ef18c3d371203ce25450",
     "semantic_hash": ""
   },
   "deno.json": {
@@ -342,9 +342,9 @@
     "semantic_hash": ""
   },
   "index.html": {
-    "mtime": 1791262577.7424831,
-    "seen": 1791262597.9349346,
-    "ast_hash": "7cb19aa94063ec217046c2e79edd7abf",
+    "mtime": 1791785339.1050572,
+    "seen": 1791785354.2217035,
+    "ast_hash": "54a5476da3257578a4a5bf8b6451b5e3",
     "semantic_hash": ""
   },
   "report.html": {

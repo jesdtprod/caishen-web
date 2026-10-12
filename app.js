@@ -3828,10 +3828,6 @@ async function toggleAdminStatus(adminId) {
   } catch (error) { showToast(error.message, 'error'); }
 }
 
-const DASHBOARD_PAGE_SIZE = 5;
-let dashboardSalesCurrentPage = 1;
-let dashboardStockWarningsCurrentPage = 1;
-let dashboardTransfersCurrentPage = 1;
 let dashboardLastActiveDate = null;
 
 function renderDashboard() {
@@ -3841,12 +3837,7 @@ function renderDashboard() {
   const selectedDate = dashboardDate ? new Date(`${dashboardDate}T00:00:00`) : new Date();
   const selectedDateKey = formatDateInput(selectedDate);
 
-  if (selectedDateKey !== dashboardLastActiveDate) {
-    dashboardSalesCurrentPage = 1;
-    dashboardStockWarningsCurrentPage = 1;
-    dashboardTransfersCurrentPage = 1;
-    dashboardLastActiveDate = selectedDateKey;
-  }
+  if (selectedDateKey !== dashboardLastActiveDate) dashboardLastActiveDate = selectedDateKey;
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate() - (6 - index));
@@ -3906,37 +3897,12 @@ function renderDashboard() {
     .sort((a, b) => Number(a.qty) - Number(b.qty) || a.name.localeCompare(b.name));
   const outOfStockCount = lowStockItems.filter((item) => Number(item.qty) <= 0).length;
   const lowStockCount = lowStockItems.filter((item) => Number(item.qty) > 0).length;
-  const totalStockWarnings = lowStockItems.length;
-  const stockWarningsTotalPages = Math.max(1, Math.ceil(totalStockWarnings / DASHBOARD_PAGE_SIZE));
-  dashboardStockWarningsCurrentPage = Math.max(1, Math.min(dashboardStockWarningsCurrentPage, stockWarningsTotalPages));
-  const stockWarningsStartIdx = (dashboardStockWarningsCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
-  const pagedStockWarnings = lowStockItems.slice(stockWarningsStartIdx, stockWarningsStartIdx + DASHBOARD_PAGE_SIZE);
-  const stockWarningsPaginationHtml = totalStockWarnings > DASHBOARD_PAGE_SIZE
-    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="stockWarnings">${renderPaginationControls_({ totalRecords: totalStockWarnings, totalPages: stockWarningsTotalPages, currentPage: dashboardStockWarningsCurrentPage, startIndex: stockWarningsStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'stock warnings')}</div>`
-    : '';
-
   const allPendingTransfers = transfers
     .filter((item) => !['Received', 'Cancelled'].includes(item.status))
     .sort((a, b) => new Date(b.date || b.createdAt || 0) - new Date(a.date || a.createdAt || 0));
-  const totalTransfers = allPendingTransfers.length;
-  const transfersTotalPages = Math.max(1, Math.ceil(totalTransfers / DASHBOARD_PAGE_SIZE));
-  dashboardTransfersCurrentPage = Math.max(1, Math.min(dashboardTransfersCurrentPage, transfersTotalPages));
-  const transfersStartIdx = (dashboardTransfersCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
-  const pagedPendingTransfers = allPendingTransfers.slice(transfersStartIdx, transfersStartIdx + DASHBOARD_PAGE_SIZE);
-  const transfersPaginationHtml = totalTransfers > DASHBOARD_PAGE_SIZE
-    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="transfers">${renderPaginationControls_({ totalRecords: totalTransfers, totalPages: transfersTotalPages, currentPage: dashboardTransfersCurrentPage, startIndex: transfersStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'pending transfers')}</div>`
-    : '';
 
   const sortedSales = [...selectedSalesRecords]
     .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
-  const totalSalesCount = sortedSales.length;
-  const salesTotalPages = Math.max(1, Math.ceil(totalSalesCount / DASHBOARD_PAGE_SIZE));
-  dashboardSalesCurrentPage = Math.max(1, Math.min(dashboardSalesCurrentPage, salesTotalPages));
-  const salesStartIdx = (dashboardSalesCurrentPage - 1) * DASHBOARD_PAGE_SIZE;
-  const pagedSales = sortedSales.slice(salesStartIdx, salesStartIdx + DASHBOARD_PAGE_SIZE);
-  const salesPaginationHtml = totalSalesCount > DASHBOARD_PAGE_SIZE
-    ? `<div class="dashboard-pagination-wrap" data-dashboard-pagination="sales">${renderPaginationControls_({ totalRecords: totalSalesCount, totalPages: salesTotalPages, currentPage: dashboardSalesCurrentPage, startIndex: salesStartIdx, pageSize: DASHBOARD_PAGE_SIZE }, 'completed sales')}</div>`
-    : '';
 
   const branchName = branches.find((branch) => branch.id === activeBranchId)?.name || 'Selected Branch';
   const permissions = currentSession?.account?.permissions || ['*'];
@@ -4215,7 +4181,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="inventory">Open inventory &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${pagedStockWarnings.length ? pagedStockWarnings.map((product) => `
+            ${lowStockItems.length ? lowStockItems.map((product) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon warning-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -4235,7 +4201,6 @@ function renderDashboard() {
               </div>
             `}
           </div>
-          ${stockWarningsPaginationHtml}
         </section>
       ` : ''}
 
@@ -4249,7 +4214,7 @@ function renderDashboard() {
             <button class="dashboard-text-link" type="button" data-dashboard-view="transfers">View transfers &rarr;</button>
           </div>
           <div class="dashboard-feed-list">
-            ${pagedPendingTransfers.length ? pagedPendingTransfers.map((transfer) => `
+            ${allPendingTransfers.length ? allPendingTransfers.map((transfer) => `
               <div class="dashboard-feed-item">
                 <div class="dashboard-feed-item-icon transfer-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
@@ -4269,7 +4234,6 @@ function renderDashboard() {
               </div>
             `}
           </div>
-          ${transfersPaginationHtml}
         </section>
       ` : ''}
 
@@ -4282,7 +4246,7 @@ function renderDashboard() {
           <button class="dashboard-text-link" type="button" data-dashboard-view="sales">View all &rarr;</button>
         </div>
         <div class="dashboard-feed-list">
-          ${pagedSales.length ? pagedSales.map((sale) => {
+          ${sortedSales.length ? sortedSales.map((sale) => {
             const isCash = sale.paymentType === 'cash';
             const initials = getCustomerInitials(sale.customerName);
             const timeStr = sale.date ? new Date(sale.date).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
@@ -4306,7 +4270,6 @@ function renderDashboard() {
             </div>
           `}
         </div>
-        ${salesPaginationHtml}
       </section>
     </div>
   `;
@@ -4316,31 +4279,9 @@ function renderDashboard() {
   if (dashboardDateInput) {
     dashboardDateInput.addEventListener('change', () => {
       dashboardDate = dashboardDateInput.value || formatDateInput(new Date());
-      dashboardSalesCurrentPage = 1;
-      dashboardStockWarningsCurrentPage = 1;
-      dashboardTransfersCurrentPage = 1;
       renderDashboard();
     });
   }
-
-  dashboard.querySelectorAll('[data-dashboard-pagination]').forEach((container) => {
-    const feed = container.dataset.dashboardPagination;
-    container.querySelectorAll('.table-pagination [data-page]').forEach((button) => {
-      button.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetPage = Number(button.dataset.page);
-        if (!Number.isFinite(targetPage) || targetPage < 1) return;
-        if (feed === 'sales') dashboardSalesCurrentPage = targetPage;
-        else if (feed === 'stockWarnings') dashboardStockWarningsCurrentPage = targetPage;
-        else if (feed === 'transfers') dashboardTransfersCurrentPage = targetPage;
-        renderDashboard();
-        const panel = container.closest('.dashboard-panel');
-        if (panel) {
-          panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      });
-    });
-  });
 
   // Interactive bindings
   dashboard.querySelectorAll('[data-dashboard-view]').forEach((elem) => {
@@ -8121,9 +8062,6 @@ function setView(view, preserveSidebarOpen = false) {
   if (view !== 'pos') {
     productsCurrentPage = 1;
     viewCurrentPages[view] = 1;
-    dashboardSalesCurrentPage = 1;
-    dashboardStockWarningsCurrentPage = 1;
-    dashboardTransfersCurrentPage = 1;
   }
   localStorage.setItem(ACTIVE_VIEW_KEY, activeView);
   const details = {
