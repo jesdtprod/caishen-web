@@ -1189,6 +1189,11 @@ body::after {
   z-index: 15;
 }
 
+/* Keep header dropdowns above page banners and their date controls. */
+.topbar:has(.custom-dropdown.open) {
+  z-index: 300;
+}
+
 .topbar-left {
   display: flex;
   align-items: center;
