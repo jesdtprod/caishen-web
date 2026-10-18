@@ -13397,7 +13397,7 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
     inset: 0;
     background: rgba(3, 7, 18, 0.7);
     backdrop-filter: blur(4px);
-    z-index: 25;
+    z-index: 400;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s var(--ease-inertia);
@@ -13414,7 +13414,7 @@ dialog .return-item-group .sale-return-resolution-actions .resolve-btn {
     bottom: 0;
     left: 0;
     width: 280px;
-    z-index: 30;
+    z-index: 410;
     transform: translateX(-100%);
     opacity: 1;
     visibility: visible;
