@@ -750,6 +750,8 @@ body::after {
 }
 
 .app-content {
+  /* Keep page banners, dropdowns and datepickers below the sidebar. */
+  isolation: isolate;
   min-width: 0;
   width: 100%;
   max-width: 100%;
