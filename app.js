@@ -1816,8 +1816,20 @@ async function loadSupabaseSession_() {
 
 async function getAppData_(branchId) {
   const client = requireSupabase_();
+  let { data: branchRows, error: branchError } = await client.from('branches').select('*').order('name');
+  throwIfError_(branchError);
+  if (!branchRows.length && currentSession?.account?.role === 'admin') {
+    // Fresh installations have no seeded branch. Persist the default before using it.
+    const { error } = await client.from('branches').insert({ branch_id: 'MAIN', name: 'Main Branch', type: 'Main', address: '', status: 'Active' });
+    if (error?.code !== '23505') throwIfError_(error);
+    ({ data: branchRows, error: branchError } = await client.from('branches').select('*').order('name'));
+    throwIfError_(branchError);
+  }
+  const account = currentSession?.account;
+  const availableBranches = branchRows.filter((branch) => branch.status === 'Active' && (account?.role !== 'staff' || branch.branch_id === account.branchId));
+  branchId = availableBranches.find((branch) => branch.branch_id === branchId)?.branch_id || availableBranches[0]?.branch_id;
+  if (!branchId) throw new Error('No active branch is available. Ask an administrator to create or activate your branch.');
   const results = await Promise.all([
-    client.from('branches').select('*').order('name'),
     client.from('products').select('*'),
     client.from('branch_products').select('*').eq('branch_id', branchId),
     client.from('inventory').select('*').eq('branch_id', branchId),
@@ -1840,7 +1852,7 @@ async function getAppData_(branchId) {
     client.from('daily_expenses').select('*').eq('branch_id', branchId).is('deleted_at', null).order('business_date', { ascending: false }),
   ]);
   results.forEach((result) => throwIfError_(result.error));
-  const [branchRows, productRows, branchProductRows, inventoryRows, customerRows, transferRows, saleRows, saleItemRows, paymentRows, openingCreditRows, stockInRows, sellingPriceBatchRows, bundleComponentRows, bundleAvailabilityRows, saleReturnRows, saleReturnItemRows, returnLotRows, quarantineCaseRows, quarantineItemRows, dailySpotCashRows, dailyExpenseRows] = results.map((result) => result.data || []);
+  const [productRows, branchProductRows, inventoryRows, customerRows, transferRows, saleRows, saleItemRows, paymentRows, openingCreditRows, stockInRows, sellingPriceBatchRows, bundleComponentRows, bundleAvailabilityRows, saleReturnRows, saleReturnItemRows, returnLotRows, quarantineCaseRows, quarantineItemRows, dailySpotCashRows, dailyExpenseRows] = results.map((result) => result.data || []);
   const branchMap = Object.fromEntries(branchRows.map((row) => [row.branch_id, row]));
   const productMap = Object.fromEntries(productRows.map((row) => [row.product_id, row]));
   const customerMap = Object.fromEntries(customerRows.map((row) => [row.customer_id, row]));
@@ -1908,6 +1920,7 @@ async function getAppData_(branchId) {
     if (item.destination_branch_id === branchId && item.status === 'Received') movement(item.product_id).qtyTransferIn += Number(item.qty || 0);
   });
   return {
+    branchId,
     branches: branchRows.map((row) => ({ id: row.branch_id, name: row.name, type: row.type, address: row.address || '', status: row.status || 'Active' })),
     inventory,
     products: catalogProducts,
@@ -1952,12 +1965,17 @@ async function getAppData_(branchId) {
 
 async function api(action, payload = {}) {
   const client = requireSupabase_();
+  if (action === 'createProduct' || action === 'addProductToBranch') {
+    const { data: branch, error } = await client.from('branches').select('branch_id').eq('branch_id', payload.branchId || '').eq('status', 'Active').maybeSingle();
+    throwIfError_(error);
+    if (!branch) throw new Error('The selected branch is unavailable. Refresh and select an active branch before adding a product.');
+  }
   if (action === 'getSetupStatus') {
     const { data, error } = await client.rpc('needs_initial_admin');
     throwIfError_(error);
     return { needsAdmin: Boolean(data) };
   }
-  if (action === 'getAppData') return getAppData_(payload.branchId || 'MAIN');
+  if (action === 'getAppData') return getAppData_(payload.branchId);
   if (action === 'createFirstAdmin') {
     const email = String(payload.email || '').trim().toLowerCase();
     if (!payload.fullName || !payload.username || !email || !payload.password) throw new Error('Full name, username, email, and password are required.');
@@ -6850,13 +6868,11 @@ function renderBranchSelector() {
   if (!selector) return;
   const account = currentSession?.account;
   const activeBranches = sortByName_(branches.filter((branch) => branch.status === 'Active' && (account?.role !== 'staff' || branch.id === account.branchId)));
-  if (activeBranches.length === 0) {
-    activeBranches.push({ id: 'MAIN', name: 'Main Branch' });
-  }
-  if (!activeBranches.some((branch) => branch.id === activeBranchId)) activeBranchId = activeBranches[0]?.id || 'MAIN';
+  if (!activeBranches.some((branch) => branch.id === activeBranchId)) activeBranchId = activeBranches[0]?.id || '';
+  localStorage.setItem(ACTIVE_BRANCH_KEY, activeBranchId);
   selector.innerHTML = activeBranches.map((branch) => `<option value="${escapeHtml(branch.id)}">${escapeHtml(branch.name)}</option>`).join('');
   selector.value = activeBranchId;
-  selector.disabled = account?.role === 'staff';
+  selector.disabled = account?.role === 'staff' || !activeBranches.length;
   updateCustomDropdown(selector);
   updateActiveBranchLabels();
   renderSidebarBranchMenu();
@@ -6864,8 +6880,8 @@ function renderBranchSelector() {
 
 function updateActiveBranchLabels() {
   const branch = branches.find((item) => item.id === activeBranchId);
-  const name = branch?.name || 'Main Branch';
-  const status = branch?.status || 'Active';
+  const name = branch?.name || 'No active branch';
+  const status = branch?.status || 'Inactive';
   const sideLabel = $('#sidebarBranchName');
   if (sideLabel) sideLabel.textContent = name;
   const badge = $('#sidebarBranchBadge');
@@ -6882,9 +6898,6 @@ function renderSidebarBranchMenu() {
   if (!menu) return;
   const account = currentSession?.account;
   const activeBranches = branches.filter((branch) => branch.status === 'Active' && (account?.role !== 'staff' || branch.id === account.branchId));
-  if (activeBranches.length === 0) {
-    activeBranches.push({ id: 'MAIN', name: 'Main Branch' });
-  }
   menu.innerHTML = activeBranches.map((b) => `
     <div class="dropdown-option${b.id === activeBranchId ? ' selected' : ''}" role="option" data-value="${escapeHtml(b.id)}" tabindex="0">
       <div class="branch-option-content">
@@ -7186,6 +7199,8 @@ async function refresh(showSkeleton = true) {
   if (showSkeleton) activeView === 'dashboard' ? renderDashboardSkeleton() : renderSkeletonTable();
   try {
     const data = await api('getAppData', { branchId: activeBranchId }, 'GET');
+    if (activeBranchId !== data.branchId) cart = [];
+    activeBranchId = data.branchId;
     branches = data.branches;
     renderBranchSelector();
     products = data.inventory;
